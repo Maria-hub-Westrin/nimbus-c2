@@ -1,0 +1,146 @@
+# SPDX-FileCopyrightText: 2026 Maria Westrin
+# SPDX-License-Identifier: MIT
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nimbus-c2"
+version = "1.0.0"
+description = "Reliability-aware C2 decision engine with epistemic uncertainty gating and deterministic safety shield."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Maria Westrin" },
+]
+keywords = [
+    "command-and-control",
+    "weapon-target-assignment",
+    "mixed-integer-linear-programming",
+    "conformal-prediction",
+    "out-of-distribution-detection",
+    "safe-reinforcement-learning",
+    "epistemic-uncertainty",
+    "reliability-aware-decision-making",
+    "situational-awareness",
+    "counter-drone",
+    "defense",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # Stage-1 core has a deliberately small footprint: one optimiser, one
+    # numeric library, no ML. Uncertainty (Stage 2), RL (Stage 3), and
+    # transport (Stage 4) layers each declare their own optional extra.
+    "numpy>=1.24",
+    "scipy>=1.11",          # scipy.optimize.milp (HiGHS) added in 1.9; 1.11 is the tested baseline.
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "pytest-cov>=4",
+    "mypy>=1.5",
+    "ruff>=0.1",
+    # Dev profile pulls the API stack so the full test suite (including
+    # tests/test_api.py) is runnable out of the box. Production deployments
+    # that only need the core solver can skip these via
+    # ``pip install nimbus-c2`` (no extras).
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+    "httpx>=0.27",
+    # Stage 2 data-ingestion layer (OpenSky adapter). Dev profile includes it
+    # so the full test suite runs out of the box.
+    "requests>=2.31",
+]
+# Stage-2 OpenSky data-ingestion standalone extra, for deployments that do
+# not need the whole dev toolchain but do need live OpenSky fetching.
+opensky = [
+    "requests>=2.31",
+]
+# Web / API surface for standalone API-only installs.
+web = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+]
+# Optional MILP accelerator. A valid Gurobi licence is required at runtime;
+# the free academic/evaluation licence suffices for development.
+gurobi = [
+    "gurobipy>=11",
+]
+# Reserved for Stage 2 (conformal, OOD, deep ensemble).
+uncertainty = [
+    "scikit-learn>=1.3",
+    "mapie>=0.7",
+]
+# Reserved for Stage 3 (offline RL + distillation).
+rl = [
+    "torch>=2.0",
+]
+# Reserved for Stage 4 (protobuf/gRPC interface).
+grpc = [
+    "grpcio>=1.58",
+    "grpcio-tools>=1.58",
+    "protobuf>=4.24",
+]
+
+[project.urls]
+Homepage = "https://github.com/Maria-hub-Westrin/nimbus-c2"
+Repository = "https://github.com/Maria-hub-Westrin/nimbus-c2"
+Issues = "https://github.com/Maria-hub-Westrin/nimbus-c2/issues"
+Documentation = "https://github.com/Maria-hub-Westrin/nimbus-c2#readme"
+
+[tool.setuptools]
+# Include NOTICE in distributed wheels — mandatory per the project's
+# attribution contract (see NOTICE, STRATEGY.md §3.5).
+license-files = ["LICENSE", "NOTICE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nimbus_c2*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line length handled by ruff format
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/nimbus_c2"]

@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use this software in academic or technical work, please cite it as below."
+title: "Nimbus-C2: a reliability-aware command-and-control decision engine with epistemic uncertainty gating and deterministic safety shield"
+authors:
+  - family-names: Westrin
+    given-names: Maria
+    city: Stockholm
+    country: SE
+abstract: >-
+  Nimbus-C2 is a tactical command-and-control decision engine
+  combining deterministic optimization (Hungarian LAP + MILP WTA),
+  situation-awareness assessment, epistemic uncertainty gating
+  (conformal prediction, out-of-distribution detection, deep-ensemble
+  aleatoric/epistemic decomposition), and a deterministic safety shield.
+  The engine is designed for graceful degradation: every layer of
+  sophistication has a conservative fallback, and the system is
+  required to recognise its own competence envelope before executing
+  autonomous actions.
+version: "1.0.0"
+date-released: "2026-04-21"
+license: MIT
+repository-code: "https://github.com/Maria-hub-Westrin/nimbus-c2"
+keywords:
+  - command-and-control
+  - weapon-target-assignment
+  - mixed-integer-linear-programming
+  - conformal-prediction
+  - out-of-distribution-detection
+  - safe-reinforcement-learning
+  - epistemic-uncertainty
+  - reliability-aware-decision-making
+  - situational-awareness
+  - counter-drone
+  - defense
+  - autonomy-gating
+preferred-citation:
+  type: software
+  title: "Nimbus-C2"
+  authors:
+    - family-names: Westrin
+      given-names: Maria
+  year: 2026
+  url: "https://github.com/Maria-hub-Westrin/nimbus-c2"
+  license: MIT

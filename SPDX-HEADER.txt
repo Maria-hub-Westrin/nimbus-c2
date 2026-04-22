@@ -1,0 +1,43 @@
+# SPDX header reference — Nimbus-C2
+#
+# Every source file in this repository carries a two-line SPDX header at
+# the top, in the comment style native to that file's format. SPDX is
+# the industry standard for machine-readable license metadata (ISO/IEC
+# 5962:2021). Using it here means:
+#
+#   1. Automated tooling (reuse, FOSSA, ScanCode, ClearlyDefined) can
+#      confirm license coverage without human review.
+#   2. A tier-one integrator's legal team passes the repo through their
+#      license-compliance pipeline with no flags.
+#   3. Attribution to Maria Westrin is present at file granularity, not
+#      only at repository granularity, which survives selective code
+#      copying into downstream projects.
+#
+# Canonical header (Python, shell, YAML, TOML — any '#'-comment language):
+#
+#     # SPDX-FileCopyrightText: 2026 Maria Westrin
+#     # SPDX-License-Identifier: MIT
+#
+# Canonical header (Markdown, HTML — any '<!-- -->' -comment language):
+#
+#     <!--
+#     SPDX-FileCopyrightText: 2026 Maria Westrin
+#     SPDX-License-Identifier: MIT
+#     -->
+#
+# Canonical header (C, C++, Rust, JS, TS — any '//' or '/* */' -comment
+# language):
+#
+#     // SPDX-FileCopyrightText: 2026 Maria Westrin
+#     // SPDX-License-Identifier: MIT
+#
+# The hygiene script at scripts/repo_hygiene.py ensures exactly one such
+# header exists per file, at the very top, in the right comment style.
+# Run it before every commit:
+#
+#     python scripts/repo_hygiene.py --check     # CI-friendly dry-run
+#     python scripts/repo_hygiene.py --write     # in-place normalisation
+#
+# Anything more verbose than the two-line header — multiple jammed
+# copyright lines, restatements of licence terms — is a defect the
+# hygiene script will collapse to the canonical form.

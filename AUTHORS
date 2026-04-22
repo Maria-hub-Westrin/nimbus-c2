@@ -1,0 +1,31 @@
+# Authors
+
+This file is the authoritative record of authorship for the Nimbus-C2
+project. Contributors who have accepted the `CONTRIBUTING.md`
+process and had code merged are listed here in order of first merged
+contribution.
+
+## Original author and project lead
+
+Maria Westrin — Stockholm, SE
+   Original concept, architecture, scoring formulation, assurance model,
+   MILP weapon-target-assignment formulation, conformal-prediction
+   gating layer, safety-shield specification, repository and
+   release management.
+
+## Contributors
+
+None yet. Contributions welcome — see `CONTRIBUTING.md`.
+
+## Citation
+
+When citing this work, cite the repository as a whole (see `CITATION.cff`
+for the canonical form). Individual authorship of specific modules is
+recorded per-file via SPDX headers and in the git history; `git blame`
+and `git log --follow <file>` give the fine-grained record.
+
+## Contact
+
+Security issues: see `SECURITY.md`.
+General questions and contributions: GitHub issues and pull requests on
+the canonical repository.

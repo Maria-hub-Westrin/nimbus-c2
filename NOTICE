@@ -1,0 +1,25 @@
+Nimbus-C2
+Copyright (c) 2026 Maria Westrin
+
+This product includes software developed by Maria Westrin.
+
+Original concept, architecture, scoring formulation, assurance model,
+MILP weapon-target-assignment formulation, conformal-prediction gating
+layer, and safety-shield specification: Maria Westrin (2026).
+
+When redistributing this software or any substantial portion thereof,
+in source or binary form, with or without modification, please preserve
+this NOTICE file and the LICENSE file alongside it, per the terms of
+the MIT License (see LICENSE).
+
+When citing this work in academic or technical publications, please use
+the citation record in CITATION.cff (GitHub renders this as a "Cite
+this repository" button) or the following plain-text form:
+
+    Westrin, M. (2026). Nimbus-C2: a reliability-aware
+    command-and-control decision engine with epistemic uncertainty
+    gating and deterministic safety shield. GitHub repository.
+    https://github.com/Maria-hub-Westrin/nimbus-c2
+
+Third-party components used in this project retain their own copyright
+and licenses. See each source tree for specifics.

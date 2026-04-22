@@ -1,0 +1,24 @@
+﻿# Secrets - NEVER commit
+secrets/
+*.credentials.json
+credentials.json
+opensky_credentials.json
+.env
+
+# Data caches - too large for git
+data/
+*.cache/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
