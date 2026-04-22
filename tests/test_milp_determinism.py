@@ -14,15 +14,13 @@ engineers will look at first.
 """
 from __future__ import annotations
 
-import random
 import sys
 from pathlib import Path
-from typing import Tuple, List
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
+from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
 from nimbus_c2.models import (  # noqa: E402
     Assignment,
     Base,
@@ -31,9 +29,6 @@ from nimbus_c2.models import (  # noqa: E402
     ScoringWeights,
     Threat,
 )
-from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
-from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
-
 
 _EFFECTORS = {
     "fighter": Effector(
@@ -54,7 +49,7 @@ _EFFECTORS = {
 }
 
 
-def _canonical_scenario() -> Tuple[List[Base], List[Threat]]:
+def _canonical_scenario() -> tuple[list[Base], list[Threat]]:
     """A single fixed scenario. Not randomised — determinism is tested
     across runs of the *same* input."""
     bases = [

@@ -25,12 +25,11 @@ inflection point).
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Sequence, Tuple
 
 from .models import CommandersIntent, Threat
-
 
 # --------------------------------------------------------------------------- #
 # Autonomy modes                                                              #
@@ -47,7 +46,7 @@ class AutonomyMode(str, Enum):
 # Thresholds (policy settings)                                                #
 # --------------------------------------------------------------------------- #
 
-AUTONOMY_THRESHOLDS: Dict[str, float] = {
+AUTONOMY_THRESHOLDS: dict[str, float] = {
     # Allow autonomous iff SA ≥ 75, complexity ≤ 0.60, stakes ≤ 0.80.
     "autonomous_sa_min": 75.0,          # SA health in [0, 100]
     "autonomous_complexity_max": 0.60,  # in [0, 1]
@@ -104,8 +103,8 @@ class AssuranceReport:
     situation_complexity: float            # [0, 1]
     stakes: float                          # [0, 1]
     autonomy_mode: AutonomyMode
-    reasons: List[str]                     # human-readable rationale
-    alerts: List[str] = field(default_factory=list)
+    reasons: list[str]                     # human-readable rationale
+    alerts: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -125,7 +124,7 @@ class AssuranceReport:
 
 def _in_blind_spot(
     threat: Threat,
-    blind_spots: Sequence[Tuple[float, float]],
+    blind_spots: Sequence[tuple[float, float]],
     radius_km: float = 80.0,
 ) -> bool:
     """A threat falls in a blind spot if it is within ``radius_km`` of any
@@ -139,8 +138,8 @@ def _in_blind_spot(
 
 def build_track_qualities(
     threats: Sequence[Threat],
-    blind_spots: Sequence[Tuple[float, float]] = (),
-) -> List[TrackQuality]:
+    blind_spots: Sequence[tuple[float, float]] = (),
+) -> list[TrackQuality]:
     """Convert raw Threat records into per-track quality summaries."""
     return [
         TrackQuality(
@@ -183,7 +182,7 @@ def compute_situation_complexity(
     count_factor = 1.0 / (1.0 + math.exp(-(n - 15) / 4.0))
 
     # Shannon entropy over threat types
-    type_counts: Dict[str, int] = {}
+    type_counts: dict[str, int] = {}
     for t in threats:
         type_counts[t.estimated_type] = type_counts.get(t.estimated_type, 0) + 1
     total = sum(type_counts.values())
@@ -213,8 +212,8 @@ def compute_situation_complexity(
 
 def compute_stakes(
     threats: Sequence[Threat],
-    protected_positions: Sequence[Tuple[float, float]],
-) -> Tuple[float, List[str]]:
+    protected_positions: Sequence[tuple[float, float]],
+) -> tuple[float, list[str]]:
     """Stakes score in [0, 1] plus human-readable reasons.
 
     Two contributions:
@@ -222,7 +221,7 @@ def compute_stakes(
         value_factor    = min(1, total_inbound_value / 500)         weight 0.6
         proximity_factor = max(0, 1 - min_dist_to_asset_km / 500)   weight 0.4
     """
-    reasons: List[str] = []
+    reasons: list[str] = []
 
     total_value = sum(t.threat_value for t in threats)
     value_factor = min(1.0, total_value / 500.0)
@@ -253,9 +252,9 @@ def compute_stakes(
 # Sensor-degradation alerts                                                   #
 # --------------------------------------------------------------------------- #
 
-def detect_alerts(track_qualities: Sequence[TrackQuality]) -> List[str]:
+def detect_alerts(track_qualities: Sequence[TrackQuality]) -> list[str]:
     """Surface-visible alerts for the commander's UI."""
-    alerts: List[str] = []
+    alerts: list[str] = []
     if not track_qualities:
         return alerts
 
@@ -283,14 +282,14 @@ def decide_autonomy(
     complexity: float,
     stakes: float,
     intent: CommandersIntent,
-) -> Tuple[AutonomyMode, List[str]]:
+) -> tuple[AutonomyMode, list[str]]:
     """Deterministic, rule-based autonomy gating.
 
     Order of precedence: DEFER guards evaluated first, then AUTONOMOUS
     permissions, otherwise ADVISE. Every branch appends to ``reasons``
     so the decision is fully explainable to the operator.
     """
-    reasons: List[str] = []
+    reasons: list[str] = []
 
     # DEFER: degraded SA.
     if sa_health < AUTONOMY_THRESHOLDS["defer_sa_max"]:
@@ -332,9 +331,9 @@ def decide_autonomy(
 
 def build_assurance_report(
     threats: Sequence[Threat],
-    protected_positions: Sequence[Tuple[float, float]],
+    protected_positions: Sequence[tuple[float, float]],
     intent: CommandersIntent,
-    blind_spots: Sequence[Tuple[float, float]] = (),
+    blind_spots: Sequence[tuple[float, float]] = (),
 ) -> AssuranceReport:
     """End-to-end assurance computation.
 

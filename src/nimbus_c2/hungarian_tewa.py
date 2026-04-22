@@ -25,7 +25,7 @@ will never choose them when any feasible alternative exists.
 from __future__ import annotations
 
 import time
-from typing import Dict, List, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -53,7 +53,7 @@ _BIG_M: float = 1.0e9
 def _build_cost_matrix(
     candidates: Sequence[Candidate],
     n_threats: int,
-) -> Tuple[np.ndarray, List[Tuple[str, str]]]:
+) -> tuple[np.ndarray, list[tuple[str, str]]]:
     """Build a rectangular cost matrix for scipy.linear_sum_assignment.
 
     Rows are (base_name, effector_name) shooter identities; columns are
@@ -67,10 +67,10 @@ def _build_cost_matrix(
     shooter_keys : List[(base_name, effector_name)]
         Row labels in the same order as matrix rows.
     """
-    shooter_keys: List[Tuple[str, str]] = sorted({
+    shooter_keys: list[tuple[str, str]] = sorted({
         (c.base_name, c.effector_name) for c in candidates
     })
-    key_to_row: Dict[Tuple[str, str], int] = {
+    key_to_row: dict[tuple[str, str], int] = {
         k: i for i, k in enumerate(shooter_keys)
     }
     n_shooters = len(shooter_keys)
@@ -137,7 +137,7 @@ def solve_hungarian(
         )
 
     # Look up candidate by (base, effector, threat_idx) for fast retrieval.
-    cand_lookup: Dict[Tuple[str, str, int], Candidate] = {
+    cand_lookup: dict[tuple[str, str, int], Candidate] = {
         (c.base_name, c.effector_name, c.threat_idx): c
         for c in candidates
     }
@@ -152,8 +152,8 @@ def solve_hungarian(
         row_idx, col_idx = linear_sum_assignment(cost)
     t1 = time.perf_counter()
 
-    chosen: List[Candidate] = []
-    for r, c_col in zip(row_idx.tolist(), col_idx.tolist()):
+    chosen: list[Candidate] = []
+    for r, c_col in zip(row_idx.tolist(), col_idx.tolist(), strict=False):
         cost_rc = cost[r, c_col]
         # Discard infeasible (BigM) matches: they are padding, not real.
         if cost_rc >= _BIG_M / 2:

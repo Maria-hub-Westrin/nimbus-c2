@@ -6,17 +6,19 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nimbus_c2 import (  # noqa: E402
-    Base, Threat, Effector, CommandersIntent,
-    build_assurance_report, AutonomyMode,
-    forecast_waves,
-    generate_coas, COALabel,
-    build_offline_sitrep,
+    AutonomyMode,
+    Base,
+    COALabel,
+    CommandersIntent,
+    Effector,
+    Threat,
+    build_assurance_report,
     evaluate,
+    forecast_waves,
+    generate_coas,
 )
 
 _EFFECTORS = {

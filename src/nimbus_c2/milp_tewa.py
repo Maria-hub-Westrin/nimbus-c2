@@ -46,10 +46,10 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
 
 import numpy as np
-from scipy.optimize import LinearConstraint, Bounds, milp
+from scipy.optimize import Bounds, LinearConstraint, milp
 
 from .models import (
     Base,
@@ -65,7 +65,6 @@ from .scoring import (
     enumerate_candidates,
 )
 
-
 # --------------------------------------------------------------------------- #
 # Problem construction                                                        #
 # --------------------------------------------------------------------------- #
@@ -76,10 +75,10 @@ def _build_problem(
     effectors: Mapping[str, Effector],
     threats: Sequence[Threat],
     intent: CommandersIntent,
-) -> Tuple[
+) -> tuple[
     np.ndarray,                # c: objective coefficients
     LinearConstraint,          # constraints stacked as Ax <= b
-    List[Candidate],           # feasible candidates, same order as columns
+    list[Candidate],           # feasible candidates, same order as columns
 ]:
     """Construct the MILP in scipy.optimize.milp canonical form.
 
@@ -108,17 +107,17 @@ def _build_problem(
     #
     # One row per threat; coefficient = 1 on every variable whose
     # candidate references this threat.
-    n_threats = len(threats)
+    len(threats)
     # Index threats by their stable id rather than by enumeration index
     # to stay agnostic to caller ordering.
     threat_order = sorted({c.threat_id for c in feasible})
-    threat_row: Dict[str, int] = {tid: i for i, tid in enumerate(threat_order)}
+    threat_row: dict[str, int] = {tid: i for i, tid in enumerate(threat_order)}
 
     # ---- C2: capacity per (base, effector) --------------------------------
     #
     # For each (b, e) with positive capacity, Σ_t x_{b,e,t} ≤ cap(b,e).
     be_keys = sorted({(c.base_name, c.effector_name) for c in feasible})
-    be_row: Dict[Tuple[str, str], int] = {k: i for i, k in enumerate(be_keys)}
+    be_row: dict[tuple[str, str], int] = {k: i for i, k in enumerate(be_keys)}
 
     n_c1 = len(threat_order)
     n_c2 = len(be_keys)
@@ -133,7 +132,7 @@ def _build_problem(
         b_ub[i] = Kt
 
     # Fill C2 rows: capacity lookup.
-    base_by_name: Dict[str, Base] = {b.name: b for b in bases}
+    base_by_name: dict[str, Base] = {b.name: b for b in bases}
     for (bname, ename), i in be_row.items():
         cap = base_by_name[bname].capacity(ename)
         b_ub[n_c1 + i] = float(cap)
@@ -225,8 +224,8 @@ def solve_milp(
     effectors: Mapping[str, Effector],
     threats: Sequence[Threat],
     intent: CommandersIntent,
-    weights: Optional[ScoringWeights] = None,
-    solver: Optional[str] = None,
+    weights: ScoringWeights | None = None,
+    solver: str | None = None,
 ) -> TEWAResult:
     """Solve the MILP weapon-target-assignment problem.
 
@@ -281,7 +280,7 @@ def solve_milp(
         )
     t1 = time.perf_counter()
 
-    chosen: List[Candidate] = [
+    chosen: list[Candidate] = [
         feasible[i] for i, v in enumerate(x_sol.tolist()) if v == 1
     ]
     chosen.sort(key=lambda c: (c.base_name, c.effector_name, c.threat_id))

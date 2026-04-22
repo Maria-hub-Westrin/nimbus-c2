@@ -20,10 +20,9 @@ Stage-1 solvers. Later stages (conformal, OOD, ensemble) extend the
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Mapping, Tuple
-
 
 # --------------------------------------------------------------------------- #
 # Effector registry                                                           #
@@ -277,7 +276,7 @@ class TEWAResult:
         Number of (base, effector, threat) tuples that survived
         feasibility pruning. Useful for diagnostics.
     """
-    assignments: List[Assignment]
+    assignments: list[Assignment]
     total_utility: float
     solver: str
     wall_clock_ms: float

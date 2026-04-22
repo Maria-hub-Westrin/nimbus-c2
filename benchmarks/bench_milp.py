@@ -22,10 +22,11 @@ import statistics
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
+from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
 from nimbus_c2.models import (  # noqa: E402
     Base,
     CommandersIntent,
@@ -33,9 +34,6 @@ from nimbus_c2.models import (  # noqa: E402
     ScoringWeights,
     Threat,
 )
-from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
-from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
-
 
 _EFFECTORS = {
     "fighter": Effector(
@@ -88,7 +86,7 @@ def _scenario(seed: int, n_bases: int, n_threats: int):
     return bases, threats
 
 
-def _percentile(xs: List[float], p: float) -> float:
+def _percentile(xs: list[float], p: float) -> float:
     xs_sorted = sorted(xs)
     k = p * (len(xs_sorted) - 1)
     f = int(k)
@@ -100,7 +98,7 @@ def _measure(solver_fn, bases, effectors, threats, intent, weights, n_runs: int)
     # Warm-up, excluded from statistics.
     for _ in range(3):
         solver_fn(bases, effectors, threats, intent, weights)
-    latencies_ms: List[float] = []
+    latencies_ms: list[float] = []
     for _ in range(n_runs):
         t0 = time.perf_counter()
         solver_fn(bases, effectors, threats, intent, weights)
@@ -117,7 +115,7 @@ def _measure(solver_fn, bases, effectors, threats, intent, weights, n_runs: int)
     }
 
 
-def run_benchmark() -> Dict:
+def run_benchmark() -> dict:
     intent = CommandersIntent(
         min_pk_for_engage=0.3,
         min_safety_margin_sec=5.0,
@@ -126,7 +124,7 @@ def run_benchmark() -> Dict:
     weights = ScoringWeights()
 
     fleet_sizes = [5, 10, 20, 30, 50, 100]
-    results: Dict = {}
+    results: dict = {}
 
     for n_threats in fleet_sizes:
         n_bases = max(3, n_threats // 5)

@@ -11,8 +11,8 @@ from the optimisation, never from disagreeing cost matrices.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .models import (
     Assignment,
@@ -24,7 +24,6 @@ from .models import (
     distance_km,
     sigmoid,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Per-tuple scoring                                                           #
@@ -102,7 +101,7 @@ def time_to_intercept_sec(
 
 def time_to_asset_sec(
     threat: Threat,
-    protected_positions: Sequence[Tuple[float, float]],
+    protected_positions: Sequence[tuple[float, float]],
 ) -> float:
     """Seconds until threat reaches its nearest protected asset."""
     if not protected_positions:
@@ -148,8 +147,8 @@ def enumerate_candidates(
     threats: Sequence[Threat],
     intent: CommandersIntent,
     weights: ScoringWeights,
-    protected_positions: Optional[Sequence[Tuple[float, float]]] = None,
-) -> List[Candidate]:
+    protected_positions: Sequence[tuple[float, float]] | None = None,
+) -> list[Candidate]:
     """Enumerate all (base, effector, threat) tuples with feasibility.
 
     Iteration order is deterministic: bases sorted by ``name``,
@@ -165,7 +164,7 @@ def enumerate_candidates(
         caps = [(b.x, b.y) for b in bases if b.is_capital]
         protected_positions = caps if caps else [(b.x, b.y) for b in bases]
 
-    candidates: List[Candidate] = []
+    candidates: list[Candidate] = []
     for b_idx, base in sorted_bases:
         for e_name, eff in sorted_effectors:
             # Gate on per-cycle capacity, not raw inventory. This is what

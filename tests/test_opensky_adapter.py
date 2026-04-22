@@ -20,7 +20,7 @@ import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -34,7 +34,6 @@ from nimbus_c2.opensky_adapter import (  # noqa: E402
     StateVector,
     TokenManager,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures — raw state-vector tuples matching OpenSky schema                  #
@@ -69,7 +68,7 @@ _NULL_POSITION = [
 ]
 
 
-def _make_opensky_response(states: List[List[Any]]) -> Dict[str, Any]:
+def _make_opensky_response(states: list[list[Any]]) -> dict[str, Any]:
     return {"time": 1713700810, "states": states}
 
 
@@ -85,7 +84,7 @@ class _FakeResponse:
         *,
         status_code: int = 200,
         json_data: Any = None,
-        headers: Dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
         text: str = "",
     ) -> None:
         self.status_code = status_code
@@ -180,7 +179,7 @@ class TestTokenManager:
         assert len(calls) == 1
 
     def test_refresh_near_expiry(self):
-        calls: List[str] = []
+        calls: list[str] = []
 
         def fake_post(url, data, timeout):
             calls.append(url)
@@ -209,7 +208,7 @@ class TestLiveFetch:
     def _make_adapter_with_response(
         self, response: _FakeResponse, *, authenticated: bool = False
     ) -> OpenSkyAdapter:
-        captured: Dict[str, Any] = {}
+        captured: dict[str, Any] = {}
 
         def fake_get(url, headers, timeout):
             captured["url"] = url

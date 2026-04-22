@@ -20,8 +20,8 @@ processes, and Python versions. No hidden state, no global RNG.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Mapping, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 from .assurance import AssuranceReport, build_assurance_report
 from .coa_generator import COA, generate_coas
@@ -41,7 +41,7 @@ class EvaluationResult:
     """Complete Nimbus-C2 evaluation output."""
     assurance: AssuranceReport
     forecast: WaveForecast
-    coas: List[COA]
+    coas: list[COA]
     sitrep: SITREP
     n_threats: int
     total_threat_value: float
@@ -64,7 +64,7 @@ def evaluate(
     effectors: Mapping[str, Effector],
     threats: Sequence[Threat],
     intent: CommandersIntent,
-    blind_spots: Sequence[Tuple[float, float]] = (),
+    blind_spots: Sequence[tuple[float, float]] = (),
     weights: ScoringWeights | None = None,
 ) -> EvaluationResult:
     """One-shot end-to-end evaluation.
@@ -84,7 +84,7 @@ def evaluate(
         Assurance + forecast + three COAs + SITREP. Deterministic.
     """
     # Step 1: assurance layer decides autonomy mode.
-    protected_positions: List[Tuple[float, float]] = [
+    protected_positions: list[tuple[float, float]] = [
         (b.x, b.y) for b in bases if b.is_capital
     ]
     if not protected_positions:

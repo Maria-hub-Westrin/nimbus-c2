@@ -27,9 +27,9 @@ survival percentages never pass through one.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Sequence
 
 from .assurance import AssuranceReport, AutonomyMode
 from .coa_generator import COA, COALabel
@@ -50,7 +50,7 @@ class SITREP:
     recommendation: str
     assurance_note: str
     follow_on_note: str
-    alerts: List[str] = field(default_factory=list)
+    alerts: list[str] = field(default_factory=list)
     source: SITREPSource = SITREPSource.TEMPLATE
 
     def as_dict(self) -> dict:
@@ -190,12 +190,11 @@ def build_offline_sitrep(
     rec = next((c for c in coas if c.label == COALabel.RECOMMENDED), None)
     if rec is not None:
         n_engaged = len({a.threat_id for a in rec.assignments})
-        engaged_value = sum(
+        sum(
             a.utility for a in rec.assignments
         )  # not directly value, but a proxy; the coverage % is the authoritative figure.
     else:
         n_engaged = 0
-        engaged_value = 0.0
 
     # Use the authoritative coverage fraction for the value display.
     authoritative_engaged_value = (

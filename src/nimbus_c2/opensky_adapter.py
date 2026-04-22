@@ -75,13 +75,12 @@ from __future__ import annotations
 
 import json
 import os
-import time
-from dataclasses import dataclass, field, asdict
+from collections.abc import Iterable, Sequence
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Optional, Sequence, Tuple
+from typing import Any, Literal
 from urllib.parse import urlencode
-
 
 # --------------------------------------------------------------------------- #
 # Canonical bounding boxes                                                    #
@@ -90,10 +89,10 @@ from urllib.parse import urlencode
 #: Baltic Sea + Gotland airspace, covering Swedish-relevant operations.
 #: Values chosen to include Stockholm (59.33, 18.07), Gotland (57.53, 18.36),
 #: and the approaches to Copenhagen, Helsinki, Tallinn, Riga.
-BBOX_BALTIC: Tuple[float, float, float, float] = (54.0, 10.0, 60.5, 24.0)
+BBOX_BALTIC: tuple[float, float, float, float] = (54.0, 10.0, 60.5, 24.0)
 
 #: Narrower Gotland-focused box for higher temporal-resolution studies.
-BBOX_GOTLAND_NARROW: Tuple[float, float, float, float] = (56.5, 17.0, 58.5, 20.0)
+BBOX_GOTLAND_NARROW: tuple[float, float, float, float] = (56.5, 17.0, 58.5, 20.0)
 
 #: OpenSky endpoints.
 API_BASE = "https://opensky-network.org/api"
@@ -118,25 +117,25 @@ class StateVector:
     post-hoc translation.
     """
     icao24: str
-    callsign: Optional[str]
-    origin_country: Optional[str]
-    time_position: Optional[int]
-    last_contact: Optional[int]
-    longitude: Optional[float]
-    latitude: Optional[float]
-    baro_altitude: Optional[float]
+    callsign: str | None
+    origin_country: str | None
+    time_position: int | None
+    last_contact: int | None
+    longitude: float | None
+    latitude: float | None
+    baro_altitude: float | None
     on_ground: bool
-    velocity: Optional[float]
-    true_track: Optional[float]
-    vertical_rate: Optional[float]
-    sensors: Optional[List[int]]
-    geo_altitude: Optional[float]
-    squawk: Optional[str]
+    velocity: float | None
+    true_track: float | None
+    vertical_rate: float | None
+    sensors: list[int] | None
+    geo_altitude: float | None
+    squawk: str | None
     spi: bool
-    position_source: Optional[int]
+    position_source: int | None
 
     @classmethod
-    def from_array(cls, row: Sequence[Any]) -> "StateVector":
+    def from_array(cls, row: Sequence[Any]) -> StateVector:
         """Construct from a raw OpenSky state-vector tuple.
 
         OpenSky returns state vectors as fixed-length arrays; this
@@ -173,11 +172,13 @@ class StateVector:
         return self.longitude is not None and self.latitude is not None
 
     def is_in_bbox(
-        self, bbox: Tuple[float, float, float, float]
+        self, bbox: tuple[float, float, float, float]
     ) -> bool:
         """True iff the track's position lies inside (lamin, lomin, lamax, lomax)."""
         if not self.has_position():
             return False
+        assert self.latitude is not None
+        assert self.longitude is not None
         lamin, lomin, lamax, lomax = bbox
         return (
             lamin <= self.latitude <= lamax
@@ -185,7 +186,7 @@ class StateVector:
         )
 
 
-def _clean_callsign(v: Any) -> Optional[str]:
+def _clean_callsign(v: Any) -> str | None:
     """OpenSky pads callsigns to 8 chars with trailing spaces. Strip them."""
     if v is None:
         return None
@@ -202,16 +203,16 @@ class StateSnapshot:
     """One fetch worth of OpenSky data, with provenance metadata."""
     fetch_time_utc: str                  # ISO-8601 UTC
     source_time_unix: int                # OpenSky's `time` field
-    bbox: Tuple[float, float, float, float]
+    bbox: tuple[float, float, float, float]
     authenticated: bool
-    states: List[StateVector]
+    states: list[StateVector]
     raw_count: int                       # tracks returned by API
     in_bbox_count: int                   # after local bbox enforcement
     source: Literal["opensky_live", "offline_cache"]
-    cache_path: Optional[str] = None     # if written to / read from disk
-    rate_limit_remaining: Optional[int] = None
+    cache_path: str | None = None     # if written to / read from disk
+    rate_limit_remaining: int | None = None
 
-    def as_jsonable(self) -> Dict[str, Any]:
+    def as_jsonable(self) -> dict[str, Any]:
         """Serialise to dict suitable for json.dump."""
         return {
             "fetch_time_utc": self.fetch_time_utc,
@@ -227,7 +228,7 @@ class StateSnapshot:
         }
 
     @classmethod
-    def from_jsonable(cls, payload: Dict[str, Any]) -> "StateSnapshot":
+    def from_jsonable(cls, payload: dict[str, Any]) -> StateSnapshot:
         """Reconstruct from a dict previously produced by as_jsonable()."""
         states = [
             StateVector(**s) for s in payload["states"]
@@ -263,18 +264,18 @@ class TokenManager:
 
     def __init__(
         self,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
         *,
-        http_get=None,
-        http_post=None,
+        http_get: Any = None,
+        http_post: Any = None,
     ) -> None:
         self.client_id = client_id or os.environ.get("OPENSKY_CLIENT_ID")
         self.client_secret = (
             client_secret or os.environ.get("OPENSKY_CLIENT_SECRET")
         )
-        self._token: Optional[str] = None
-        self._expires_at: Optional[datetime] = None
+        self._token: str | None = None
+        self._expires_at: datetime | None = None
         # Injectable for tests; default to requests when running live.
         self._http_post = http_post
 
@@ -317,7 +318,7 @@ class TokenManager:
         )
         return self._token
 
-    def auth_headers(self) -> Dict[str, str]:
+    def auth_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.get_token()}"}
 
 
@@ -349,10 +350,10 @@ class OpenSkyAdapter:
         self,
         *,
         mode: Literal["live", "offline"] = "live",
-        bbox: Tuple[float, float, float, float] = BBOX_BALTIC,
+        bbox: tuple[float, float, float, float] = BBOX_BALTIC,
         min_credits_floor: int = 200,
-        token_manager: Optional[TokenManager] = None,
-        http_get=None,
+        token_manager: TokenManager | None = None,
+        http_get: Any = None,
     ) -> None:
         if mode not in ("live", "offline"):
             raise ValueError(f"mode must be 'live' or 'offline', got {mode!r}")
@@ -361,10 +362,10 @@ class OpenSkyAdapter:
         self.min_credits_floor = int(min_credits_floor)
         self._http_get = http_get
         self._tokens = token_manager
-        self._last_rate_limit_remaining: Optional[int] = None
+        self._last_rate_limit_remaining: int | None = None
 
     @property
-    def last_rate_limit_remaining(self) -> Optional[int]:
+    def last_rate_limit_remaining(self) -> int | None:
         return self._last_rate_limit_remaining
 
     # --------------------------------------------------------------------- #
@@ -374,7 +375,7 @@ class OpenSkyAdapter:
     def fetch(
         self,
         *,
-        cache_dir: Optional[str | Path] = None,
+        cache_dir: str | Path | None = None,
     ) -> StateSnapshot:
         """Fetch one snapshot from the OpenSky REST API.
 
@@ -407,7 +408,7 @@ class OpenSkyAdapter:
                 f"< floor {self.min_credits_floor}. Pause collection."
             )
 
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
         authenticated = False
         if self._tokens is None:
             self._tokens = TokenManager()
@@ -486,7 +487,7 @@ class OpenSkyAdapter:
 
         return snap
 
-    def _do_get(self, url: str, headers: Dict[str, str]):
+    def _do_get(self, url: str, headers: dict[str, str]) -> Any:
         """HTTP GET, injectable for tests."""
         if self._http_get is not None:
             return self._http_get(url, headers=headers, timeout=30)

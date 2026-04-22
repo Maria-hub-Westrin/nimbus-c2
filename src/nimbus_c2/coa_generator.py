@@ -19,10 +19,9 @@ plain-language philosophy, and presented together.
 """
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Mapping, Sequence
 
 from .milp_tewa import solve_milp
 from .models import (
@@ -35,7 +34,6 @@ from .models import (
     Threat,
 )
 from .wave_forecaster import WaveForecast
-
 
 # --------------------------------------------------------------------------- #
 # COA descriptors                                                             #
@@ -52,10 +50,10 @@ class COA:
     """A single Course of Action, fully annotated for operator display."""
     label: COALabel
     philosophy: str                          # one-sentence plain-language summary
-    assignments: List[Assignment]
+    assignments: list[Assignment]
     total_utility: float
     predicted_coverage: float                # fraction of total value engaged
-    reserves_spent: Dict[str, int]           # effector → rounds used
+    reserves_spent: dict[str, int]           # effector → rounds used
     risk_if_follow_on: float                 # proxy for "how exposed we are next wave"
     # Monte Carlo uncertainty placeholders — populated by the uncertainty layer in Stage 2.
     survival_estimate: float = 0.0
@@ -91,9 +89,9 @@ class COA:
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
 
-def _reserves_spent(result: TEWAResult) -> Dict[str, int]:
+def _reserves_spent(result: TEWAResult) -> dict[str, int]:
     """Count rounds consumed per effector type."""
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for a in result.assignments:
         counts[a.effector] = counts.get(a.effector, 0) + 1
     return counts
@@ -126,7 +124,7 @@ def _risk_if_follow_on(
     inventory the forecast says we'll need; 0.0 = no follow-on
     exposure predicted.
     """
-    recommended_reserve: Dict[str, int] = {}
+    recommended_reserve: dict[str, int] = {}
     for sec in forecast.sectors:
         for eff, rsv in sec.recommended_reserve.items():
             recommended_reserve[eff] = recommended_reserve.get(eff, 0) + rsv
@@ -135,7 +133,7 @@ def _risk_if_follow_on(
         return 0.0
 
     # Total remaining inventory per effector across all bases after this COA.
-    remaining: Dict[str, int] = {}
+    remaining: dict[str, int] = {}
     for b in bases:
         for eff, inv in b.inventory.items():
             spent = reserves_spent.get(eff, 0)
@@ -187,9 +185,9 @@ def _run_reserve_conserving(
 ) -> COA:
     """Temporarily add a reserve floor that withholds half of each
     high-value effector's inventory."""
-    stricter_bases: List[Base] = []
+    stricter_bases: list[Base] = []
     for b in bases:
-        new_reserve: Dict[str, int] = dict(b.reserve_floor)
+        new_reserve: dict[str, int] = dict(b.reserve_floor)
         for eff_name, inv in b.inventory.items():
             # Protect expensive effectors (fighter, sam); let cheap ones
             # (drone) be fully usable.
@@ -264,7 +262,7 @@ def generate_coas(
     intent: CommandersIntent,
     forecast: WaveForecast,
     weights: ScoringWeights | None = None,
-) -> List[COA]:
+) -> list[COA]:
     """Produce the three COAs, in deterministic label order."""
     w = weights if weights is not None else ScoringWeights()
     return [

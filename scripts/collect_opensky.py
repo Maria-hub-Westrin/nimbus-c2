@@ -34,7 +34,6 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 # Adapter imports deferred into main() so --help does not require the package
 # to be installed; this makes the script usable as a standalone documentation

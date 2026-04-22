@@ -17,11 +17,10 @@ Stage-1/2 pitch.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Sequence, Tuple
 
 from .models import Threat
-
 
 # --------------------------------------------------------------------------- #
 # Configuration                                                               #
@@ -29,7 +28,7 @@ from .models import Threat
 
 # Azimuth partition: four 90° sectors centred on N/E/S/W.
 # Sector id maps to (lower_deg, upper_deg) half-open, with N wrapping.
-SECTORS: Dict[str, Tuple[float, float]] = {
+SECTORS: dict[str, tuple[float, float]] = {
     "N": (315.0, 45.0),   # 315..360 ∪ 0..45
     "E": (45.0, 135.0),
     "S": (135.0, 225.0),
@@ -59,7 +58,7 @@ class SectorForecast:
     n_current: int
     arrival_prob_60s: float                    # P(≥1 follow-on arrival in 60 s)
     expected_value: float                      # value likely to arrive
-    recommended_reserve: Dict[str, int] = field(default_factory=dict)
+    recommended_reserve: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -68,7 +67,7 @@ class WaveForecast:
     horizon_sec: float
     total_expected_value: float
     follow_on_likelihood: float                # max over sectors
-    sectors: List[SectorForecast] = field(default_factory=list)
+    sectors: list[SectorForecast] = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {
@@ -121,7 +120,7 @@ def _sector_for_azimuth(az_deg: float) -> str:
 
 def forecast_waves(
     threats: Sequence[Threat],
-    protected_position: Tuple[float, float],
+    protected_position: tuple[float, float],
     horizon_sec: float = 120.0,
     rate_window_sec: float = RATE_WINDOW_SEC,
 ) -> WaveForecast:
@@ -145,13 +144,13 @@ def forecast_waves(
     """
     ax, ay = protected_position
 
-    by_sector: Dict[str, List[Threat]] = {k: [] for k in SECTORS}
+    by_sector: dict[str, list[Threat]] = {k: [] for k in SECTORS}
     for t in threats:
         az = _azimuth_deg(t.x, t.y, ax, ay)
         sid = _sector_for_azimuth(az)
         by_sector[sid].append(t)
 
-    forecasts: List[SectorForecast] = []
+    forecasts: list[SectorForecast] = []
     follow_on_likelihood = 0.0
     total_expected_value = 0.0
 

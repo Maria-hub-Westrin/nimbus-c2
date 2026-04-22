@@ -13,7 +13,7 @@ decision logic; that is entirely owned by ``nimbus_c2.pipeline.evaluate``.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,12 +25,10 @@ from .. import (
     Effector,
     EvaluationResult,
     ROETier,
-    ScoringWeights,
     Threat,
     evaluate,
 )
-from .demo_data import DEMO_SCENARIOS, DemoScenario
-
+from .demo_data import DEMO_SCENARIOS
 
 # --------------------------------------------------------------------------- #
 # Pydantic request/response schemas                                           #
@@ -40,7 +38,7 @@ class EffectorIn(BaseModel):
     name: str
     speed_kmh: float = 1000.0
     cost_weight: float = 10.0
-    pk_matrix: Dict[str, float]
+    pk_matrix: dict[str, float]
     range_km: float = 400.0
     min_engage_km: float = 0.0
     response_time_sec: float = 15.0
@@ -50,10 +48,10 @@ class BaseIn(BaseModel):
     name: str
     x: float
     y: float
-    inventory: Dict[str, int]
+    inventory: dict[str, int]
     is_capital: bool = False
-    reserve_floor: Dict[str, int] = Field(default_factory=dict)
-    launchers_per_cycle: Dict[str, int] = Field(default_factory=dict)
+    reserve_floor: dict[str, int] = Field(default_factory=dict)
+    launchers_per_cycle: dict[str, int] = Field(default_factory=dict)
 
 
 class ThreatIn(BaseModel):
@@ -78,11 +76,11 @@ class IntentIn(BaseModel):
 
 
 class EvaluateRequest(BaseModel):
-    bases: List[BaseIn]
-    effectors: Dict[str, EffectorIn]
-    threats: List[ThreatIn]
+    bases: list[BaseIn]
+    effectors: dict[str, EffectorIn]
+    threats: list[ThreatIn]
     intent: IntentIn = Field(default_factory=IntentIn)
-    blind_spots: List[Tuple[float, float]] = Field(default_factory=list)
+    blind_spots: list[tuple[float, float]] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -167,13 +165,13 @@ app.add_middleware(
 
 
 @app.get("/health")
-def health():
+def health() -> dict[str, Any]:
     """Liveness probe."""
     return {"status": "ok", "version": app.version}
 
 
 @app.get("/demo/scenarios")
-def list_scenarios():
+def list_scenarios() -> dict[str, Any]:
     """List canned demo scenarios."""
     return {
         "scenarios": [
@@ -184,7 +182,7 @@ def list_scenarios():
 
 
 @app.get("/demo/scenarios/{scenario_id}")
-def get_scenario(scenario_id: str):
+def get_scenario(scenario_id: str) -> dict[str, Any]:
     """Retrieve a canned demo scenario's full tactical state."""
     s = DEMO_SCENARIOS.get(scenario_id)
     if s is None:
@@ -196,17 +194,17 @@ def get_scenario(scenario_id: str):
 
 
 @app.post("/evaluate")
-def evaluate_endpoint(req: EvaluateRequest):
+def evaluate_endpoint(req: EvaluateRequest) -> dict[str, Any]:
     """Run the full Nimbus-C2 pipeline."""
     try:
         result = _evaluate_from_request(req)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return result.as_dict()
 
 
 @app.post("/demo/{scenario_id}/evaluate")
-def evaluate_demo(scenario_id: str):
+def evaluate_demo(scenario_id: str) -> dict[str, Any]:
     """Convenience endpoint: run the pipeline against a named demo scenario."""
     s = DEMO_SCENARIOS.get(scenario_id)
     if s is None:

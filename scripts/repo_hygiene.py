@@ -63,9 +63,9 @@ import argparse
 import ast
 import os
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
 
 # --------------------------------------------------------------------------- #
 # Configuration                                                               #
@@ -150,7 +150,7 @@ class RunSummary:
     files_seen: int = 0
     files_touched: int = 0
     files_corrupted: int = 0
-    reports: List[FileReport] = field(default_factory=list)
+    reports: list[FileReport] = field(default_factory=list)
 
     def as_exit_code(self, check_mode: bool) -> int:
         if self.files_corrupted > 0:
@@ -193,7 +193,7 @@ def _detect_collapse_corruption(raw_text: str, ext: str) -> bool:
     return False
 
 
-def _strip_jammed_headers(lines: List[str], style: Tuple) -> Tuple[List[str], bool]:
+def _strip_jammed_headers(lines: list[str], style: tuple) -> tuple[list[str], bool]:
     """Collapse repeated '# Copyright (c) Maria Westrin ...' fragments at top.
 
     The pattern in the current repo is: several '# Copyright' markers
@@ -220,7 +220,7 @@ def _strip_jammed_headers(lines: List[str], style: Tuple) -> Tuple[List[str], bo
         return False
 
     changed = False
-    out: List[str] = []
+    out: list[str] = []
     consumed_header = False
     for idx, line in enumerate(lines):
         if not consumed_header and idx < 5 and looks_jammed(line):
@@ -232,7 +232,7 @@ def _strip_jammed_headers(lines: List[str], style: Tuple) -> Tuple[List[str], bo
     return out, changed
 
 
-def _has_canonical_spdx(lines: List[str], style: Tuple) -> bool:
+def _has_canonical_spdx(lines: list[str], style: tuple) -> bool:
     """Detect whether the canonical SPDX header is already present.
 
     Lenient: we only require the two magic tokens to appear somewhere in
@@ -249,7 +249,7 @@ def _has_canonical_spdx(lines: List[str], style: Tuple) -> bool:
     )
 
 
-def _canonical_header(style: Tuple) -> List[str]:
+def _canonical_header(style: tuple) -> list[str]:
     prefix, suffix, block_prefix, block_suffix = style
     if block_prefix is not None:
         return [
@@ -265,7 +265,7 @@ def _canonical_header(style: Tuple) -> List[str]:
     ]
 
 
-def _insert_header(lines: List[str], style: Tuple) -> List[str]:
+def _insert_header(lines: list[str], style: tuple) -> list[str]:
     """Prepend canonical header. If there's a shebang, keep it on line 1."""
     header = _canonical_header(style)
     if lines and lines[0].startswith("#!"):
@@ -416,7 +416,7 @@ def format_summary(summary: RunSummary, check_only: bool) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Nimbus-C2 repository hygiene.",
     )

@@ -13,8 +13,8 @@ competence-awareness behaviour.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -22,9 +22,9 @@ class DemoScenario:
     id: str
     name: str
     description: str
-    request: Dict[str, Any]  # ready-to-POST EvaluateRequest payload
+    request: dict[str, Any]  # ready-to-POST EvaluateRequest payload
 
-    def to_request(self) -> Dict[str, Any]:
+    def to_request(self) -> dict[str, Any]:
         return self.request
 
 
@@ -128,8 +128,8 @@ SCENARIO_CLEAN = DemoScenario(
 # Scenario 2: SWARM — mixed types, many tracks, noisier sensors               #
 # --------------------------------------------------------------------------- #
 
-def _swarm_threats() -> List[Dict[str, Any]]:
-    threats: List[Dict[str, Any]] = []
+def _swarm_threats() -> list[dict[str, Any]]:
+    threats: list[dict[str, Any]] = []
     # 12 drones fanning in from N-W
     for i in range(12):
         threats.append({
@@ -230,7 +230,7 @@ SCENARIO_JAMMED = DemoScenario(
 # Registry                                                                    #
 # --------------------------------------------------------------------------- #
 
-DEMO_SCENARIOS: Dict[str, DemoScenario] = {
+DEMO_SCENARIOS: dict[str, DemoScenario] = {
     s.id: s for s in (SCENARIO_CLEAN, SCENARIO_SWARM, SCENARIO_JAMMED)
 }
 

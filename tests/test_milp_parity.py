@@ -18,13 +18,14 @@ from __future__ import annotations
 import random
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 import pytest
 
 # Make "core" importable when tests are run from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
+from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
 from nimbus_c2.models import (  # noqa: E402
     Base,
     CommandersIntent,
@@ -32,9 +33,6 @@ from nimbus_c2.models import (  # noqa: E402
     ScoringWeights,
     Threat,
 )
-from nimbus_c2.hungarian_tewa import solve_hungarian  # noqa: E402
-from nimbus_c2.milp_tewa import solve_milp  # noqa: E402
-
 
 # --------------------------------------------------------------------------- #
 # Scenario generator                                                          #
@@ -83,7 +81,7 @@ def _make_scenario(
     seed: int,
     n_bases: int = 3,
     n_threats: int = 5,
-) -> Tuple[List[Base], List[Threat]]:
+) -> tuple[list[Base], list[Threat]]:
     """Deterministic random scenario for parity testing."""
     rng = random.Random(seed)
     bases = []
