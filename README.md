@@ -4,6 +4,10 @@ SPDX-License-Identifier: MIT
 -->
 
 # Nimbus-C2
+[![CI](https://github.com/Maria-hub-Westrin/nimbus-c2/actions/workflows/ci.yml/badge.svg)](https://github.com/Maria-hub-Westrin/nimbus-c2/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 
 A reliability-aware command-and-control decision engine with epistemic
 uncertainty gating and a deterministic safety shield. Research software
