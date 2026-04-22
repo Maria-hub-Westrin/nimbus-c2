@@ -86,7 +86,7 @@ class RunConfig:
             )
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "RunConfig":
+    def from_yaml(cls, path: str | Path) -> RunConfig:
         """Load a RunConfig from a YAML file.
 
         YAML lists become tuples in the frozen dataclass.

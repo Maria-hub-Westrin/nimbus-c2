@@ -21,13 +21,12 @@ Design rationale
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
-
 
 # Canonical class ordering. MUST match the order used everywhere.
 CLASS_NAMES: tuple[str, ...] = ("civilian", "military", "unknown")
@@ -100,7 +99,7 @@ class BaselineClassifier:
         self,
         X: NDArray[np.float64],
         y: NDArray[np.int64],
-    ) -> "BaselineClassifier":
+    ) -> BaselineClassifier:
         """Train the classifier on labelled data.
 
         Parameters

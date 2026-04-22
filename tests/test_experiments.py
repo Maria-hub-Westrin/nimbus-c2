@@ -20,7 +20,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nimbus_c2.experiments import RunConfig, run_conformal_validation  # noqa: E402
-from nimbus_c2.experiments.result import CoverageResult, ExperimentResult  # noqa: E402
+from nimbus_c2.experiments.result import ExperimentResult  # noqa: E402
 
 
 def _minimal_config(**overrides: object) -> RunConfig:

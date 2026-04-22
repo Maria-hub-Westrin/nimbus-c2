@@ -28,7 +28,6 @@ from nimbus_c2.conformal import (  # noqa: E402
     predict_set,
 )
 
-
 CLASS_NAMES = ("civilian", "military", "unknown")
 
 
