@@ -1,4 +1,4 @@
-ï»¿# Secrets - NEVER commit
+# Secrets - NEVER commit
 secrets/
 *.credentials.json
 credentials.json
@@ -22,3 +22,6 @@ dist/
 .vscode/
 .idea/
 *.swp
+
+# Experiment results — regenerable from configs, not version-controlled
+results/

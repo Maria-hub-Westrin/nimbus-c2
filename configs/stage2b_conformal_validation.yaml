@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Maria Westrin
+# SPDX-License-Identifier: MIT
+
+# Stage 2b conformal prediction coverage-guarantee validation.
+#
+# Runs n_scenarios independent seeded scenarios at two alpha levels and
+# verifies that mean empirical coverage >= (1 - alpha) - tolerance.
+#
+# Changing any value here requires a new experiment name or a commit, or
+# the result is not reproducible.
+
+experiment_name: stage2b_conformal_validation
+seed: 42
+alpha_levels: [0.10, 0.05]
+n_calibration: 500
+n_test: 500
+n_scenarios: 50
+class_names: [civilian, military, unknown]
+data_source: synthetic
+classifier_confidence: 0.70
