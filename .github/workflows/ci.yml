@@ -67,4 +67,4 @@ jobs:
       - name: ruff
         run: python -m ruff check src/ tests/ benchmarks/
       - name: mypy
-        run: python -m mypy src/core
+        run: python -m mypy src/nimbus_c2
