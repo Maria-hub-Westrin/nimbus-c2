@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>SAAB Nimbus Scenario UX</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana; background: #0f172a; color: #e2e8f0; text-align: center; }
+        canvas { background: #1e293b; border-radius: 10px; margin-top: 20px; border: 2px solid #334155; }
+        button {
+            padding: 10px 20px; margin: 10px; cursor: pointer; font-size: 16px; border-radius: 5px; border:none;
+        }
+        .autonomous { background:#10b981; color:#fff; }
+        .advise { background:#f59e0b; color:#fff; }
+        .defer { background:#ef4444; color:#fff; }
+    </style>
+</head>
+<body>
+    <h1>SAAB Nimbus UX Demo</h1>
+    <button class="autonomous" onclick="scenario=1">Autonomous</button>
+    <button class="advise" onclick="scenario=2">Advise</button>
+    <button class="defer" onclick="scenario=3">Defer</button>
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <script>
+        const canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
+        let scenario=1,x=400,y=225,vx=2,vy=2;
+
+        const scenData={
+          1:{color:'#10b981',speed:1.5,text:'Autonomous: SA-health High'},
+          2:{color:'#f59e0b',speed:3,text:'Advise: SA-health Medium'},
+          3:{color:'#ef4444',speed:4,text:'Defer: SA-health Low'}
+        };
+
+        function draw(){
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle=scenData[scenario].color;
+          ctx.beginPath(); ctx.arc(x,y,20,0,Math.PI*2); ctx.fill();
+          ctx.font='18px Segoe UI'; ctx.fillText(scenData[scenario].text,20,30);
+          
+          if(x+vx>780||x+vx<20)vx=-vx;
+          if(y+vy>430||y+vy<20)vy=-vy;
+
+          x+=vx*scenData[scenario].speed; y+=vy*scenData[scenario].speed;
+
+          requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
