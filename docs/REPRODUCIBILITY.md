@@ -1,3 +1,7 @@
+<!--
+SPDX-FileCopyrightText: 2026 Maria Westrin
+SPDX-License-Identifier: MIT
+-->
 # Reproducibility Guide
 
 This document explains how to reproduce any experimental result in Nimbus-C2.
