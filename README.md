@@ -203,3 +203,12 @@ the [`CITATION.cff`](CITATION.cff) record. Plain-text form:
 MIT — see [`LICENSE`](LICENSE). Attribution expected via
 [`NOTICE`](NOTICE) on redistribution, and via citation in academic and
 technical publications.
+
+## Scientific foundation
+
+Nimbus-C2 implements an intentional synthesis of established research on human-in-the-loop autonomy, situational awareness, explainability, and epistemic uncertainty. Two documents record the theoretical grounding and the path from prototype to empirical validation:
+
+- [`docs/hitl-research-basis.md`](docs/hitl-research-basis.md) — seven sections tracing the research origins of the design choices: Parasuraman-Sheridan-Wickens (2000), Endsley (1995), Santoni de Sio and van den Hoven (2018), Miller (2019), Huellermeier and Waegeman (2021), Lee and See (2004), and the EU AI Act Article 14.
+- [`docs/validation-roadmap.md`](docs/validation-roadmap.md) — explicit statement of what Stage 2b does and does not validate. Lists five Stage 3 studies (threshold calibration, mode-transition comprehension, advisory utility, trust calibration, adversarial degradation) and the TRL 3-4 maturity statement.
+
+The prototype at its current stage is **design-consistent with the literature**. Empirical validation is future work, clearly scoped in the roadmap.
