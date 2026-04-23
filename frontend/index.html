@@ -1,587 +1,2220 @@
-<!DOCTYPE html>
-<!--
-SPDX-FileCopyrightText: 2026 Maria Westrin
-SPDX-License-Identifier: MIT
--->
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Nimbus-C2 — Operator Console</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NIMBUS-C2 · Operator Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet" />
 <style>
-  /* ------- defense-palette, monospace where numbers live ------- */
+  /* ─────────────────────────────────────────────
+     NIMBUS-C2 · Reliability-aware C2 Decision Engine
+     Defense operator console — standalone demo
+     ───────────────────────────────────────────── */
+
   :root {
-    --bg:        #0b1115;
-    --panel:    #141d24;
-    --panel-2:  #1b252d;
-    --edge:     #2a3a47;
-    --text:     #cfd8dc;
-    --text-dim: #8b9aa3;
-    --accent:   #6fb3d2;
-    --ok:       #71b891;
-    --warn:     #e0c068;
-    --danger:   #d57b7b;
-    --ok-bg:    rgba(113, 184, 145, 0.13);
-    --warn-bg:  rgba(224, 192, 104, 0.13);
-    --danger-bg:rgba(213, 123, 123, 0.13);
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-                 "Helvetica Neue", sans-serif;
-    font-size: 14px;
-  }
-  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    /* base palette — deep operations room */
+    --bg-0: #060910;
+    --bg-1: #0a0f1a;
+    --bg-2: #0f1624;
+    --surface: #111a2b;
+    --surface-hi: #172238;
+    --border: #1e2a42;
+    --border-hi: #2a3a57;
+    --grid: #152033;
 
-  header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--edge);
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--panel);
-  }
-  header .title { font-weight: 600; letter-spacing: 0.5px; }
-  header .title .sub { color: var(--text-dim); margin-left: 8px; font-weight: 400; }
-  header .status .dot {
-    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-    background: var(--ok); margin-right: 6px; vertical-align: middle;
+    /* text */
+    --text-0: #eef2f8;
+    --text-1: #c5cfde;
+    --text-2: #8593a8;
+    --text-3: #556478;
+    --text-4: #3a4658;
+
+    /* mode-indexed accents */
+    --ok:     #3fd98e;
+    --ok-dim: #1f7a4d;
+    --warn:   #f5b642;
+    --warn-dim:#7a5b20;
+    --alert:  #ff5166;
+    --alert-dim:#7a2530;
+    --info:   #5fb4ff;
+
+    /* dynamic (set by mode class) */
+    --mode: var(--ok);
+    --mode-dim: var(--ok-dim);
+    --mode-glow: rgba(63,217,142,.20);
+
+    /* typography */
+    --f-sans: "IBM Plex Sans", system-ui, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+    --f-serif: "IBM Plex Serif", Georgia, serif;
   }
 
-  main {
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-family: var(--f-sans);
+    font-size: 13px;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(95,180,255,0.05), transparent 50%),
+      radial-gradient(ellipse at 100% 100%, var(--mode-glow), transparent 55%),
+      linear-gradient(180deg, #060910 0%, #07111f 100%);
+    transition: background-image 600ms ease;
+  }
+
+  /* subtle scanline overlay for operator-console feel */
+  body::after {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.012) 0,
+      rgba(255,255,255,0.012) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    z-index: 999;
+    mix-blend-mode: overlay;
+  }
+
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+  .serif { font-family: var(--f-serif); }
+
+  /* ─── top classification strip ─────────────── */
+  .classification {
+    position: fixed; top: 0; left: 0; right: 0; height: 20px;
+    background: #2a6d3b;
+    color: #eaf7ec;
+    font-family: var(--f-mono);
+    font-size: 10px; letter-spacing: 0.28em; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 20;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset;
+  }
+
+  /* ─── app chrome ───────────────────────────── */
+  .app {
+    position: fixed; inset: 20px 0 0 0;
     display: grid;
-    grid-template-columns: 260px 1fr 340px;
-    gap: 1px;
-    background: var(--edge);
-    height: calc(100vh - 57px);
+    grid-template-rows: 52px 1fr 72px;
+    grid-template-columns: 300px 1fr 360px;
+    grid-template-areas:
+      "header   header   header"
+      "left     center   right"
+      "scenarios scenarios scenarios";
+    gap: 10px;
+    padding: 10px;
   }
-  main > section { background: var(--bg); overflow-y: auto; padding: 20px; }
 
-  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px;
-       color: var(--text-dim); margin: 0 0 12px 0; font-weight: 600; }
-
-  /* ------- scenario picker ------- */
-  .scenario {
-    display: block; width: 100%; text-align: left;
-    background: var(--panel); border: 1px solid var(--edge);
-    color: var(--text); padding: 12px; margin-bottom: 8px;
-    border-radius: 4px; cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+  /* ─── header ──────────────────────────────── */
+  header {
+    grid-area: header;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+    padding: 0 16px;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
   }
-  .scenario:hover { border-color: var(--accent); }
-  .scenario.active { border-color: var(--accent); background: var(--panel-2); }
-  .scenario .name { font-weight: 600; margin-bottom: 4px; }
-  .scenario .desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
-
-  /* ------- centre panel ------- */
-  .gauges {
-    display: grid; grid-template-columns: 200px 1fr; gap: 16px;
-    margin-bottom: 20px;
+  header::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--mode);
+    box-shadow: 0 0 12px var(--mode-glow);
+    transition: background 400ms ease;
   }
-  .sa-gauge { position: relative; }
-  .sa-gauge svg { width: 100%; height: auto; }
-  .sa-value {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -30%);
-    font-size: 28px; font-weight: 600;
+  .brand {
+    display: flex; align-items: baseline; gap: 10px;
   }
-  .sa-value small { display: block; font-size: 10px; color: var(--text-dim);
-                    text-transform: uppercase; letter-spacing: 1px; }
-
-  .autonomy {
-    display: inline-flex; align-items: center; gap: 12px;
-    padding: 12px 18px; border-radius: 4px; font-weight: 600;
-    font-size: 16px; letter-spacing: 0.5px;
-    margin-bottom: 8px; text-transform: uppercase;
+  .brand .logo {
+    font-family: var(--f-serif);
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--text-0);
+    letter-spacing: 0.01em;
   }
-  .autonomy.autonomous { background: var(--ok-bg); color: var(--ok);
-                         border: 1px solid var(--ok); }
-  .autonomy.advise     { background: var(--warn-bg); color: var(--warn);
-                         border: 1px solid var(--warn); }
-  .autonomy.defer      { background: var(--danger-bg); color: var(--danger);
-                         border: 1px solid var(--danger); }
-  .autonomy .dot { width: 10px; height: 10px; border-radius: 50%;
-                   background: currentColor; }
-
-  .meta-row {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-    margin-bottom: 16px;
+  .brand .logo span { color: var(--mode); transition: color 400ms ease; }
+  .brand .sub {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--text-3);
+    text-transform: uppercase;
+    padding-left: 10px;
+    border-left: 1px solid var(--border-hi);
   }
   .meta {
-    background: var(--panel); padding: 10px 12px; border-radius: 4px;
-    border: 1px solid var(--edge);
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    font-family: var(--f-mono);
+    font-size: 11px;
   }
-  .meta .label { font-size: 10px; color: var(--text-dim);
-                 text-transform: uppercase; letter-spacing: 0.8px; }
-  .meta .value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+  .meta .kv { display: flex; flex-direction: column; gap: 1px; }
+  .meta .kv .k { color: var(--text-3); letter-spacing: 0.2em; font-size: 9px; text-transform: uppercase; }
+  .meta .kv .v { color: var(--text-0); letter-spacing: 0.05em; }
+  .meta .kv .v.live { display: flex; align-items: center; gap: 6px; }
+  .meta .kv .v.live::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--mode);
+    box-shadow: 0 0 6px var(--mode);
+    animation: pulse 1.6s ease-in-out infinite;
+    transition: background 400ms ease, box-shadow 400ms ease;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+  .op-id {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .op-id strong { color: var(--text-0); font-weight: 500; }
 
-  .reasons {
-    background: var(--panel); padding: 10px 14px; border-radius: 4px;
-    border: 1px solid var(--edge); font-size: 12px;
-    color: var(--text-dim); line-height: 1.6;
+  /* ─── panel primitive ─────────────────────── */
+  .panel {
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
   }
-  .reasons ul { margin: 4px 0; padding-left: 18px; }
-  .reasons li { margin: 2px 0; }
+  .panel-h {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,0,0,0.15);
+  }
+  .panel-h .t {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    font-weight: 500;
+  }
+  .panel-h .t::before {
+    content: "▪"; color: var(--mode); margin-right: 8px;
+    transition: color 400ms ease;
+  }
+  .panel-h .idx {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-4);
+    letter-spacing: 0.15em;
+  }
+  .panel-body {
+    padding: 14px;
+    flex: 1;
+    overflow: auto;
+  }
 
-  .alerts {
-    margin-top: 12px;
-    background: var(--warn-bg); border: 1px solid var(--warn);
-    padding: 10px 14px; border-radius: 4px; font-size: 12px;
-  }
-  .alerts strong { color: var(--warn); margin-right: 6px; }
+  /* ─── left column ─────────────────────────── */
+  .left { grid-area: left; display: flex; flex-direction: column; gap: 10px; }
 
-  /* ------- COA cards ------- */
-  .coas {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    margin-top: 20px;
+  /* SA-health gauge */
+  .sa-panel .panel-body { padding: 16px 14px 12px; }
+  .gauge-wrap {
+    display: flex; justify-content: center; align-items: center;
+    margin-bottom: 8px;
   }
-  .coa {
-    background: var(--panel); border: 1px solid var(--edge);
-    border-radius: 4px; padding: 14px;
+  .gauge {
+    width: 180px; height: 180px;
+    position: relative;
   }
-  .coa.selected { border-color: var(--accent); background: var(--panel-2); }
-  .coa .label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--accent); font-weight: 600;
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge .track { fill: none; stroke: var(--bg-0); stroke-width: 10; }
+  .gauge .fill  { fill: none; stroke: var(--mode); stroke-width: 10; stroke-linecap: butt;
+                  filter: drop-shadow(0 0 8px var(--mode-glow));
+                  transition: stroke 400ms ease, stroke-dashoffset 700ms cubic-bezier(.4,0,.2,1); }
+  .gauge .ticks line { stroke: var(--border-hi); stroke-width: 1; }
+  .gauge-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none;
   }
-  .coa .philosophy {
-    font-size: 12px; color: var(--text-dim); margin: 6px 0 10px 0;
-    line-height: 1.4;
+  .gauge-label .pct {
+    font-family: var(--f-serif);
+    font-size: 38px;
+    font-weight: 600;
+    color: var(--text-0);
+    letter-spacing: -0.02em;
+    line-height: 1;
   }
-  .coa-stats {
+  .gauge-label .pct sup {
+    font-family: var(--f-mono);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-2);
+    margin-left: 2px;
+    top: -0.6em;
+  }
+  .gauge-label .lbl {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--text-3);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .gauge-label .state {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--mode);
+    letter-spacing: 0.22em;
+    font-weight: 500;
+    margin-top: 2px;
+    transition: color 400ms ease;
+  }
+
+  /* SA components breakdown */
+  .sa-breakdown {
+    display: grid; gap: 6px; margin-top: 6px;
+  }
+  .sa-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 40px;
+    gap: 8px;
+    align-items: center;
+    font-family: var(--f-mono);
+    font-size: 10px;
+  }
+  .sa-row .k { color: var(--text-3); letter-spacing: 0.12em; text-transform: uppercase; }
+  .sa-row .bar { height: 4px; background: var(--bg-0); border-radius: 0; overflow: hidden; }
+  .sa-row .bar > i {
+    display: block; height: 100%; background: var(--text-2);
+    transition: width 600ms cubic-bezier(.4,0,.2,1), background 400ms;
+  }
+  .sa-row .v { color: var(--text-1); text-align: right; font-size: 10px; }
+  .sa-row.good .bar > i { background: var(--ok); }
+  .sa-row.warn .bar > i { background: var(--warn); }
+  .sa-row.bad  .bar > i { background: var(--alert); }
+
+  /* Autonomy mode block */
+  .mode-panel .panel-body { padding: 0; }
+  .mode-block {
+    padding: 14px;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+  .mode-block:first-child { border-top: 0; }
+  .mode-block.active {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+  }
+  .mode-block.active::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+    background: var(--mode);
+    transition: background 400ms ease;
+  }
+  .mode-name {
+    display: flex; align-items: baseline; gap: 10px;
+    font-family: var(--f-serif);
+    font-size: 20px; font-weight: 600;
+    color: var(--text-3);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .mode-block.active .mode-name { color: var(--mode); transition: color 400ms ease; }
+  .mode-name .num {
+    font-family: var(--f-mono);
+    font-size: 10px; font-weight: 400;
+    color: var(--text-4);
+    letter-spacing: 0.15em;
+  }
+  .mode-block.active .mode-name .num { color: var(--mode-dim); transition: color 400ms ease; }
+  .mode-desc {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .mode-block.active .mode-desc { color: var(--text-2); }
+  .mode-thresh {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-4);
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+  }
+
+  /* Sensor status */
+  .sensors-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .sensor {
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    display: flex; flex-direction: column; gap: 3px;
+    position: relative;
+  }
+  .sensor .name {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--text-3);
+    text-transform: uppercase;
+  }
+  .sensor .val {
+    font-family: var(--f-mono);
     font-size: 12px;
+    color: var(--text-0);
+    font-weight: 500;
   }
-  .coa-stats .stat { display: flex; justify-content: space-between; }
-  .coa-stats .stat .k { color: var(--text-dim); }
-  .coa-stats .stat .v { font-weight: 600; }
-  .coa-assignments { margin-top: 10px; border-top: 1px solid var(--edge);
-                     padding-top: 10px; }
-  .coa-assignments .asn {
-    font-size: 11px; padding: 3px 0; display: grid;
-    grid-template-columns: 1fr auto; color: var(--text-dim);
+  .sensor .dot {
+    position: absolute; top: 8px; right: 8px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-4);
   }
-  .coa-assignments .asn strong { color: var(--text); }
+  .sensor.ok .dot   { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .sensor.warn .dot { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .sensor.bad .dot  { background: var(--alert); box-shadow: 0 0 6px var(--alert); animation: blink 0.9s infinite; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  .sensor.ok .val   { color: var(--ok); }
+  .sensor.warn .val { color: var(--warn); }
+  .sensor.bad .val  { color: var(--alert); }
 
-  /* ------- right sidebar ------- */
-  .sitrep {
-    background: var(--panel); padding: 16px; border-radius: 4px;
-    border: 1px solid var(--edge);
+  /* ─── center column ───────────────────────── */
+  .center { grid-area: center; display: flex; flex-direction: column; gap: 10px; }
+
+  /* tactical display */
+  .tactical {
+    flex: 1.35;
+    min-height: 0;
   }
-  .sitrep .field { margin-bottom: 12px; }
-  .sitrep .field .k { font-size: 10px; color: var(--text-dim);
-                      text-transform: uppercase; letter-spacing: 0.8px;
-                      margin-bottom: 4px; }
-  .sitrep .field .v { font-size: 13px; line-height: 1.5; }
-  .sitrep .headline {
-    font-size: 15px; font-weight: 600; margin-bottom: 14px;
-    padding-bottom: 10px; border-bottom: 1px solid var(--edge);
+  .tactical .panel-body { padding: 0; position: relative; overflow: hidden; }
+  .radar {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .radar-overlay {
+    position: absolute; top: 12px; left: 12px;
+    display: flex; gap: 16px;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.12em;
+  }
+  .radar-overlay .kv { display: flex; flex-direction: column; }
+  .radar-overlay .kv .k { font-size: 8px; letter-spacing: 0.25em; color: var(--text-4); }
+  .radar-overlay .kv .v { color: var(--text-1); }
+  .radar-legend {
+    position: absolute; bottom: 12px; right: 12px;
+    display: flex; gap: 14px;
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-3);
+  }
+  .radar-legend span { display: flex; align-items: center; gap: 5px; }
+  .radar-legend i {
+    width: 8px; height: 8px; display: inline-block;
+  }
+  .radar-legend .i-hostile { background: var(--alert); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+  .radar-legend .i-unknown { background: var(--warn); border-radius: 50%; }
+  .radar-legend .i-friend  { background: var(--info); transform: rotate(45deg); }
+
+  /* wave forecast */
+  .wave-panel { flex: 1; min-height: 0; }
+  .wave-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    height: 100%;
+  }
+  .wave-cell {
+    background: rgba(0,0,0,0.28);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: relative;
+  }
+  .wave-cell .sec {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--text-3);
+  }
+  .wave-cell .n {
+    font-family: var(--f-serif);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-0);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .wave-cell .n sup {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-3);
+    top: -1em;
+    margin-left: 3px;
+  }
+  .wave-cell .trend {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-2);
+    letter-spacing: 0.05em;
+  }
+  .wave-cell .conf {
+    margin-top: auto;
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--f-mono);
+    font-size: 9px;
+    color: var(--text-3);
+    letter-spacing: 0.15em;
+  }
+  .wave-cell .conf .b { flex: 1; height: 2px; background: var(--bg-0); }
+  .wave-cell .conf .b > i { display: block; height: 100%; background: var(--text-2); transition: width 600ms, background 400ms; }
+  .wave-cell.hot .conf .b > i   { background: var(--alert); }
+  .wave-cell.hot .n   { color: var(--alert); }
+  .wave-cell.warm .conf .b > i  { background: var(--warn); }
+  .wave-cell.warm .n  { color: var(--warn); }
+  .wave-cell.cool .conf .b > i  { background: var(--ok); }
+  .wave-cell.unknown .conf .b > i { background: var(--text-3); }
+  .wave-cell.unknown .n { color: var(--text-3); font-family: var(--f-mono); font-size: 18px; }
+
+  /* ─── right column ────────────────────────── */
+  .right { grid-area: right; display: flex; flex-direction: column; gap: 10px; }
+
+  /* decision header */
+  .decision-head .panel-body {
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .ttd {
+    font-family: var(--f-serif);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--mode);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    transition: color 400ms;
+  }
+  .ttd sup {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    color: var(--text-3);
+    margin-left: 4px;
+  }
+  .ttd-k {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--text-3);
+    text-transform: uppercase;
+  }
+  .auth-badge {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--mode);
+    border: 1px solid var(--mode-dim);
+    padding: 6px 10px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    transition: color 400ms, border-color 400ms;
   }
 
-  .forecast {
-    margin-top: 16px; background: var(--panel); padding: 14px;
-    border-radius: 4px; border: 1px solid var(--edge);
+  /* COA cards */
+  .coa-list { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: auto; }
+  .coa {
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.22);
+    border-radius: 2px;
+    padding: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 200ms, background 200ms;
   }
-  .sector-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-    margin-top: 8px; font-size: 12px;
+  .coa:hover { border-color: var(--border-hi); background: rgba(0,0,0,0.36); }
+  .coa.recommended {
+    border-color: var(--mode-dim);
+    background: linear-gradient(180deg, var(--mode-glow) 0%, rgba(0,0,0,0.22) 60%);
   }
-  .sector {
-    background: var(--panel-2); padding: 8px; border-radius: 3px;
-    border-left: 3px solid var(--text-dim);
+  .coa.recommended::after {
+    content: "RECOMMENDED";
+    position: absolute; top: -1px; right: -1px;
+    background: var(--mode); color: var(--bg-0);
+    font-family: var(--f-mono); font-size: 8px; font-weight: 600;
+    letter-spacing: 0.22em; padding: 3px 8px;
+    transition: background 400ms;
   }
-  .sector.hot { border-left-color: var(--danger); }
-  .sector .id { font-weight: 600; }
+  .coa-row1 {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  }
+  .coa .name {
+    font-family: var(--f-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-0);
+    letter-spacing: 0.01em;
+  }
+  .coa .code {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    color: var(--text-3);
+    letter-spacing: 0.2em;
+  }
+  .coa .desc {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 4px;
+    line-height: 1.45;
+  }
+  .coa-metrics {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .coa-metrics .m { font-family: var(--f-mono); display: flex; flex-direction: column; gap: 2px; }
+  .coa-metrics .m .k { font-size: 8px; letter-spacing: 0.22em; color: var(--text-3); text-transform: uppercase; }
+  .coa-metrics .m .v { font-size: 12px; color: var(--text-0); font-weight: 500; }
+  .coa-metrics .m.conf .v { color: var(--mode); transition: color 400ms; }
 
-  /* ------- map ------- */
-  .map-panel { margin-top: 20px; }
-  #map {
-    width: 100%; height: 260px;
-    background: var(--panel);
-    border: 1px solid var(--edge); border-radius: 4px;
+  /* reliability bar */
+  .reliability {
+    margin-top: 10px;
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--f-mono); font-size: 9px;
+    color: var(--text-3); letter-spacing: 0.12em;
+  }
+  .reliability .bar { flex: 1; height: 3px; background: var(--bg-0); }
+  .reliability .bar > i { display: block; height: 100%; background: var(--mode); transition: width 600ms, background 400ms; }
+
+  /* DEFER explanation block */
+  .defer-expl {
+    border: 1px solid var(--alert-dim);
+    background: linear-gradient(180deg, rgba(255,81,102,0.08) 0%, rgba(0,0,0,0.22) 70%);
+    border-radius: 2px;
+    padding: 14px;
+  }
+  .defer-expl .h {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    color: var(--alert);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .defer-expl p {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    color: var(--text-1);
+    line-height: 1.5;
+  }
+  .defer-expl .math {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--warn);
+    padding: 8px 10px;
+    background: var(--bg-0);
+    border-left: 2px solid var(--warn);
+    margin-top: 8px;
   }
 
-  .loading { opacity: 0.5; pointer-events: none; }
+  /* ─── scenario selector ──────────────────── */
+  .scenarios {
+    grid-area: scenarios;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .scenarios .lbl-col {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 16px;
+    border-right: 1px solid var(--border);
+  }
+  .scenarios .lbl-col .t {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--text-3);
+    text-transform: uppercase;
+  }
+  .scenarios .lbl-col .s {
+    font-family: var(--f-serif);
+    font-size: 15px;
+    color: var(--text-1);
+    margin-top: 2px;
+    letter-spacing: 0.01em;
+  }
+  .scenario-btns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .sc-btn {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-2);
+    transition: all 200ms;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .sc-btn:hover { background: var(--surface-hi); border-color: var(--border-hi); color: var(--text-0); }
+  .sc-btn .num {
+    font-family: var(--f-mono);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text-3);
+    line-height: 1;
+  }
+  .sc-btn .nm {
+    font-family: var(--f-sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-1);
+    line-height: 1.2;
+  }
+  .sc-btn .desc {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    margin-top: 3px;
+  }
+  .sc-btn .end {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--text-3);
+  }
+  .sc-btn.active {
+    border-color: var(--mode);
+    background: linear-gradient(180deg, var(--mode-glow) 0%, var(--surface) 100%);
+    color: var(--text-0);
+    box-shadow: 0 0 0 1px var(--mode-dim) inset;
+  }
+  .sc-btn.active .num { color: var(--mode); }
+  .sc-btn.active .end { color: var(--mode); }
+
+  /* footer strip */
+  .app-foot {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 20px;
+    background: #2a6d3b;
+    color: #eaf7ec;
+    font-family: var(--f-mono);
+    font-size: 10px; letter-spacing: 0.28em; font-weight: 600;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    z-index: 20;
+  }
+  .app { inset: 20px 0 20px 0; }
+
+  /* mode classes change --mode, --mode-dim, --mode-glow */
+  body.mode-autonomous {
+    --mode: var(--ok);
+    --mode-dim: var(--ok-dim);
+    --mode-glow: rgba(63,217,142,0.18);
+  }
+  body.mode-advise {
+    --mode: var(--warn);
+    --mode-dim: var(--warn-dim);
+    --mode-glow: rgba(245,182,66,0.20);
+  }
+  body.mode-defer {
+    --mode: var(--alert);
+    --mode-dim: var(--alert-dim);
+    --mode-glow: rgba(255,81,102,0.20);
+  }
+
+  /* fade-in on scenario change */
+  .center, .right, .left {
+    animation: fadein 420ms ease;
+  }
+  @keyframes fadein { from { opacity: 0.55; } to { opacity: 1; } }
+
+  /* ─── Operator Advisory Dialog ─────────── */
+  .ai-fab {
+    position: fixed; bottom: 80px; right: 20px; z-index: 40;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--surface-hi);
+    border: 1px solid var(--mode);
+    color: var(--mode);
+    font-family: var(--f-mono);
+    font-size: 9px; letter-spacing: 0.18em; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--mode-glow);
+    transition: all 200ms ease, color 400ms, border-color 400ms;
+  }
+  .ai-fab:hover { transform: scale(1.06); box-shadow: 0 0 36px var(--mode-glow); }
+  .ai-fab .glyph {
+    font-family: var(--f-serif);
+    font-size: 22px; font-weight: 600; line-height: 1; margin-bottom: 2px;
+  }
+  body.mode-advise .ai-fab, body.mode-defer .ai-fab {
+    animation: aipulse 2s ease-in-out infinite;
+  }
+  @keyframes aipulse {
+    0%, 100% { box-shadow: 0 0 14px var(--mode-glow); }
+    50%      { box-shadow: 0 0 36px var(--mode-glow); }
+  }
+  .ai-fab.hidden { display: none; }
+
+  .ai-drawer {
+    position: fixed; top: 28px; right: -540px; bottom: 28px;
+    width: 500px; z-index: 50;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--mode);
+    border-radius: 2px;
+    box-shadow: -16px 0 40px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column;
+    transition: right 320ms cubic-bezier(.4,0,.2,1), border-color 400ms;
+  }
+  .ai-drawer.open { right: 20px; }
+
+  .ai-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+    background: rgba(0,0,0,0.22);
+  }
+  .ai-head .title {
+    font-family: var(--f-mono);
+    font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mode); font-weight: 500; transition: color 400ms;
+  }
+  .ai-head .sub {
+    font-size: 10px; color: var(--text-3); margin-top: 3px; letter-spacing: 0.02em;
+  }
+  .ai-head .btns { display: flex; gap: 4px; }
+  .ai-head .btn {
+    width: 28px; height: 28px;
+    border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text-2); font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 150ms;
+    background: transparent;
+  }
+  .ai-head .btn:hover { border-color: var(--border-hi); color: var(--text-0); }
+
+  .ai-banner {
+    padding: 8px 16px;
+    font-family: var(--f-mono);
+    font-size: 9px; letter-spacing: 0.18em;
+    color: var(--warn);
+    border-bottom: 1px solid var(--border);
+    background: rgba(245,182,66,0.06);
+  }
+  .ai-banner::before { content: "▲  "; }
+
+  .ai-msgs {
+    flex: 1; overflow-y: auto;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ai-msg { display: flex; flex-direction: column; gap: 4px; max-width: 94%; }
+  .ai-msg.user { align-self: flex-end; }
+  .ai-msg.system { align-self: center; max-width: 100%; }
+  .ai-msg .who {
+    font-family: var(--f-mono);
+    font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .ai-msg.user .who { color: var(--info); text-align: right; }
+  .ai-msg.ai .who { color: var(--mode); transition: color 400ms; }
+  .ai-msg.system .who { text-align: center; color: var(--warn); }
+
+  .ai-msg .body {
+    font-size: 12px; color: var(--text-1); line-height: 1.55;
+    padding: 10px 12px; border-radius: 2px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .ai-msg.user .body {
+    background: rgba(95,180,255,0.08);
+    border-color: rgba(95,180,255,0.22);
+    color: var(--text-0);
+  }
+  .ai-msg.ai .body {
+    border-left: 2px solid var(--mode);
+    transition: border-color 400ms;
+  }
+  .ai-msg.system .body {
+    background: rgba(245,182,66,0.06);
+    border-color: rgba(245,182,66,0.22);
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--warn); text-align: center;
+  }
+  .ai-msg.error .body {
+    border-color: var(--alert-dim);
+    color: var(--alert);
+    background: rgba(255,81,102,0.06);
+  }
+  .ai-msg .body code {
+    font-family: var(--f-mono); font-size: 11px;
+    background: var(--bg-0); padding: 1px 4px; border-radius: 2px;
+  }
+  .ai-cursor::after {
+    content: "▋"; color: var(--mode);
+    animation: blink 0.8s steps(1) infinite;
+    margin-left: 2px;
+  }
+
+  .ai-quick {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 0 12px 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  .ai-quick button {
+    font-family: var(--f-mono);
+    font-size: 9px; letter-spacing: 0.12em;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-2);
+    background: transparent;
+    cursor: pointer; transition: all 150ms;
+  }
+  .ai-quick button:hover { border-color: var(--mode); color: var(--text-0); }
+
+  .ai-input-wrap {
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.22);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .ai-meta-row {
+    display: flex; gap: 10px; justify-content: space-between; align-items: center;
+    font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.12em;
+    color: var(--text-3);
+  }
+  .ai-meta-row .model { color: var(--text-2); }
+  .ai-meta-row .model .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ok); margin-right: 4px; vertical-align: middle;
+  }
+  .ai-meta-row .model.offline .dot { background: var(--alert); }
+  .ai-meta-row button {
+    color: var(--text-3); text-decoration: underline; cursor: pointer;
+    background: none; border: 0;
+  }
+  .ai-meta-row button:hover { color: var(--text-1); }
+
+  .ai-input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: flex-end; }
+  .ai-input {
+    width: 100%; min-height: 38px; max-height: 120px; resize: none;
+    background: var(--bg-0); border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text-0);
+    padding: 10px 12px;
+    font-family: var(--f-sans); font-size: 12px; line-height: 1.4;
+    outline: none; transition: border-color 150ms;
+  }
+  .ai-input:focus { border-color: var(--mode); }
+  .ai-send {
+    padding: 0 16px; height: 38px;
+    background: var(--mode); color: var(--bg-0);
+    font-family: var(--f-mono);
+    font-size: 10px; letter-spacing: 0.2em; font-weight: 600;
+    border: 0; border-radius: 2px;
+    cursor: pointer; transition: opacity 150ms;
+  }
+  .ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* API key setup modal */
+  .ai-modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .ai-modal-bg.open { display: flex; }
+  .ai-modal {
+    width: 520px; max-width: 90vw;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--mode);
+    border-radius: 2px;
+    padding: 24px;
+  }
+  .ai-modal h2 {
+    margin: 0 0 4px;
+    font-family: var(--f-serif);
+    font-size: 20px; font-weight: 600; color: var(--text-0);
+    letter-spacing: -0.01em;
+  }
+  .ai-modal .kicker {
+    font-family: var(--f-mono);
+    font-size: 9px; letter-spacing: 0.28em;
+    color: var(--mode); text-transform: uppercase;
+    margin-bottom: 8px; font-weight: 500;
+  }
+  .ai-modal .hint {
+    margin: 0 0 8px;
+    font-size: 11px; color: var(--text-2); line-height: 1.55;
+  }
+  .ai-modal label {
+    display: block;
+    font-family: var(--f-mono);
+    font-size: 9px; letter-spacing: 0.22em;
+    color: var(--text-3); text-transform: uppercase;
+    margin: 14px 0 6px;
+  }
+  .ai-modal input, .ai-modal select {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    color: var(--text-0);
+    padding: 10px 12px;
+    font-family: var(--f-mono); font-size: 12px;
+    border-radius: 2px;
+    outline: none; transition: border-color 150ms;
+  }
+  .ai-modal input:focus, .ai-modal select:focus { border-color: var(--mode); }
+  .ai-modal .note {
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: rgba(245,182,66,0.06);
+    border-left: 2px solid var(--warn);
+    font-size: 10px; color: var(--text-2);
+    line-height: 1.55;
+    font-family: var(--f-mono);
+  }
+  .ai-modal .actions {
+    display: flex; gap: 8px; justify-content: flex-end;
+    margin-top: 22px;
+  }
+  .ai-modal .actions button {
+    padding: 10px 18px;
+    font-family: var(--f-mono);
+    font-size: 10px; letter-spacing: 0.22em; font-weight: 600;
+    border-radius: 2px; cursor: pointer;
+    border: 0;
+  }
+  .ai-modal .actions .cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .ai-modal .actions .cancel:hover { color: var(--text-0); border-color: var(--border-hi); }
+  .ai-modal .actions .save {
+    background: var(--mode); color: var(--bg-0);
+  }
+  .ai-modal .actions .save:hover { opacity: 0.88; }
+
+  /* small screens fallback */
+  @media (max-width: 1280px) {
+    .app { grid-template-columns: 260px 1fr 320px; }
+    .ai-drawer { width: 420px; }
+  }
+  @media (max-width: 900px) {
+    .ai-drawer { width: calc(100vw - 40px); }
+  }
 </style>
 </head>
-<body>
+<body class="mode-autonomous">
 
-<header>
-  <div class="title">
-    NIMBUS-C2 <span class="sub">Operator Console · demo build 1.0.0</span>
-  </div>
-  <div class="status"><span class="dot" id="backend-dot"></span>
-    <span id="backend-status" class="mono">connecting...</span>
-  </div>
-</header>
+<div class="classification">UNCLASSIFIED · EXERCISE · NIMBUS-C2 · PROTOTYPE S2B</div>
 
-<main>
+<div class="app">
 
-  <!-- Left: scenario picker -->
-  <section>
-    <h2>Demo Scenarios</h2>
-    <div id="scenario-list"></div>
-
-    <h2 style="margin-top: 28px;">About</h2>
-    <div style="font-size: 12px; color: var(--text-dim); line-height: 1.5;">
-      This is a research demo of Nimbus-C2, a reliability-aware
-      C2 decision engine. The engine combines a deterministic MILP
-      TEWA solver with a situation-awareness assessment layer and
-      three-alternative course-of-action generation.
-      <br><br>
-      See <strong>STRATEGY.md</strong> for the stage-gated plan.
+  <!-- ───── header ───── -->
+  <header>
+    <div class="brand">
+      <div class="logo">NIMBUS<span>·</span>C2</div>
+      <div class="sub">Reliability-aware Command &amp; Control</div>
     </div>
-  </section>
+    <div class="meta">
+      <div class="kv">
+        <span class="k">Zulu</span>
+        <span class="v live" id="clock">12:48:07Z</span>
+      </div>
+      <div class="kv">
+        <span class="k">Sortie</span>
+        <span class="v">NBS-0417-B</span>
+      </div>
+      <div class="kv">
+        <span class="k">AOR</span>
+        <span class="v">BALTIC·E</span>
+      </div>
+      <div class="kv">
+        <span class="k">Link-16</span>
+        <span class="v" id="link-status">NOMINAL</span>
+      </div>
+    </div>
+    <div class="op-id">
+      OP · <strong>WESTRIN, M.</strong> · SE-FVB-014
+    </div>
+  </header>
 
-  <!-- Centre: evaluation view -->
-  <section id="centre">
-    <div class="gauges">
-      <div class="sa-gauge">
-        <svg viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="50" fill="none"
-                  stroke="#2a3a47" stroke-width="10" />
-          <circle cx="60" cy="60" r="50" fill="none"
-                  stroke="#6fb3d2" stroke-width="10"
-                  id="sa-arc"
-                  stroke-linecap="round"
-                  stroke-dasharray="0 314"
-                  transform="rotate(-90 60 60)"/>
+  <!-- ───── LEFT COLUMN ───── -->
+  <aside class="left">
+
+    <!-- SA-health -->
+    <section class="panel sa-panel">
+      <div class="panel-h"><span class="t">Situational-awareness health</span><span class="idx">ρ·SA</span></div>
+      <div class="panel-body">
+        <div class="gauge-wrap">
+          <div class="gauge">
+            <svg viewBox="0 0 180 180">
+              <circle class="track" cx="90" cy="90" r="78"></circle>
+              <circle class="fill" id="gauge-fill" cx="90" cy="90" r="78"
+                      stroke-dasharray="490" stroke-dashoffset="29"></circle>
+              <g class="ticks" id="ticks"></g>
+            </svg>
+            <div class="gauge-label">
+              <div class="pct"><span id="sa-pct">94</span><sup>%</sup></div>
+              <div class="lbl">SA HEALTH</div>
+              <div class="state" id="sa-state">NOMINAL</div>
+            </div>
+          </div>
+        </div>
+        <div class="sa-breakdown" id="sa-breakdown">
+          <!-- rows injected -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Autonomy mode ladder -->
+    <section class="panel mode-panel">
+      <div class="panel-h"><span class="t">Autonomy mode</span><span class="idx">χ·A</span></div>
+      <div class="panel-body">
+        <div class="mode-block" id="m-auto">
+          <div class="mode-name">AUTONOMOUS <span class="num">CHI·3</span></div>
+          <div class="mode-desc">System executes within commander's intent. Operator supervises.</div>
+          <div class="mode-thresh">ρ ≥ 0.80 · τ_decide ≤ 2s</div>
+        </div>
+        <div class="mode-block" id="m-adv">
+          <div class="mode-name">ADVISE <span class="num">CHI·2</span></div>
+          <div class="mode-desc">System recommends; operator confirms or overrides.</div>
+          <div class="mode-thresh">0.40 ≤ ρ &lt; 0.80</div>
+        </div>
+        <div class="mode-block" id="m-defer">
+          <div class="mode-name">DEFER <span class="num">CHI·1</span></div>
+          <div class="mode-desc">Reliability below threshold. Decision returned to operator.</div>
+          <div class="mode-thresh">ρ &lt; 0.40</div>
+        </div>
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ───── CENTER COLUMN ───── -->
+  <main class="center">
+
+    <!-- tactical display -->
+    <section class="panel tactical">
+      <div class="panel-h">
+        <span class="t">Tactical display · Baltic east</span>
+        <span class="idx" id="radar-range">RNG 250 km · N-up</span>
+      </div>
+      <div class="panel-body">
+        <svg class="radar" id="radar" viewBox="0 0 700 420" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="rg" cx="50%" cy="100%" r="100%">
+              <stop offset="0%"  stop-color="#0d1828"/>
+              <stop offset="65%" stop-color="#070c15"/>
+              <stop offset="100%" stop-color="#05080f"/>
+            </radialGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <rect width="700" height="420" fill="url(#rg)"/>
+
+          <!-- grid -->
+          <g stroke="#152033" stroke-width="1" fill="none">
+            <line x1="0" y1="420" x2="700" y2="420"/>
+            <line x1="350" y1="0"   x2="350" y2="420"/>
+            <line x1="0" y1="315"  x2="700" y2="315"/>
+            <line x1="0" y1="210"  x2="700" y2="210"/>
+            <line x1="0" y1="105"  x2="700" y2="105"/>
+            <line x1="175" y1="0"  x2="175" y2="420"/>
+            <line x1="525" y1="0"  x2="525" y2="420"/>
+          </g>
+
+          <!-- range rings, centered at bottom-center -->
+          <g id="rings" stroke="#1e2a42" stroke-width="1" fill="none" opacity="0.85"></g>
+
+          <!-- bearing lines -->
+          <g stroke="#152033" stroke-width="1" opacity="0.6">
+            <line x1="350" y1="420" x2="60"  y2="0"/>
+            <line x1="350" y1="420" x2="640" y2="0"/>
+            <line x1="350" y1="420" x2="350" y2="0"/>
+          </g>
+
+          <!-- friendly asset (own ship / battery) -->
+          <g transform="translate(350,420)">
+            <circle r="8" fill="#5fb4ff" opacity="0.25"/>
+            <circle r="3.5" fill="#5fb4ff"/>
+            <text x="10" y="-4" fill="#5fb4ff" font-family="IBM Plex Mono" font-size="9" letter-spacing="2">OWN</text>
+          </g>
+
+          <!-- tracks go here -->
+          <g id="tracks"></g>
+
+          <!-- bearing tick labels -->
+          <g fill="#556478" font-family="IBM Plex Mono" font-size="9" letter-spacing="1">
+            <text x="355" y="12">000°</text>
+            <text x="642" y="12">045°</text>
+            <text x="60" y="12">315°</text>
+          </g>
+
+          <!-- scanning sweep -->
+          <g id="sweep" opacity="0.18">
+            <line x1="350" y1="420" x2="350" y2="0" stroke="url(#sweep-grad)" stroke-width="140"/>
+          </g>
+          <defs>
+            <linearGradient id="sweep-grad" x1="0" x2="1">
+              <stop offset="0%" stop-color="transparent"/>
+              <stop offset="100%" stop-color="#3fd98e"/>
+            </linearGradient>
+          </defs>
         </svg>
-        <div class="sa-value">
-          <span id="sa-number">—</span>
-          <small>SA-HEALTH</small>
+        <div class="radar-overlay">
+          <div class="kv"><span class="k">TRACKS</span><span class="v mono" id="trk-count">3</span></div>
+          <div class="kv"><span class="k">HOSTILE</span><span class="v mono" id="trk-hostile">3</span></div>
+          <div class="kv"><span class="k">UNKNOWN</span><span class="v mono" id="trk-unk">0</span></div>
+          <div class="kv"><span class="k">CLOSEST</span><span class="v mono" id="trk-close">182 km</span></div>
+        </div>
+        <div class="radar-legend">
+          <span><i class="i-hostile"></i>HOSTILE</span>
+          <span><i class="i-unknown"></i>UNKNOWN</span>
+          <span><i class="i-friend"></i>FRIENDLY</span>
         </div>
       </div>
+    </section>
 
-      <div>
-        <div class="autonomy" id="autonomy-badge">
-          <span class="dot"></span><span id="autonomy-label">—</span>
-        </div>
-
-        <div class="meta-row">
-          <div class="meta">
-            <div class="label">Complexity</div>
-            <div class="value mono" id="m-complexity">—</div>
-          </div>
-          <div class="meta">
-            <div class="label">Stakes</div>
-            <div class="value mono" id="m-stakes">—</div>
-          </div>
-          <div class="meta">
-            <div class="label">TQI</div>
-            <div class="value mono" id="m-tqi">—</div>
-          </div>
-          <div class="meta">
-            <div class="label">Threats</div>
-            <div class="value mono" id="m-threats">—</div>
-          </div>
-        </div>
-
-        <div class="reasons" id="reasons">
-          <strong style="color: var(--text);">Reasons</strong>
-          <ul id="reasons-list"><li>awaiting scenario...</li></ul>
-        </div>
-
-        <div class="alerts" id="alerts" style="display: none;">
-          <strong>ALERTS</strong><span id="alerts-text"></span>
+    <!-- wave forecast -->
+    <section class="panel wave-panel">
+      <div class="panel-h">
+        <span class="t">Wave forecast · T+90s horizon</span>
+        <span class="idx">per-sector threat density</span>
+      </div>
+      <div class="panel-body">
+        <div class="wave-grid" id="wave-grid">
+          <!-- cells injected -->
         </div>
       </div>
+    </section>
+
+  </main>
+
+  <!-- ───── RIGHT COLUMN ───── -->
+  <aside class="right">
+
+    <!-- decision head -->
+    <section class="panel decision-head">
+      <div class="panel-h"><span class="t">Decision window</span><span class="idx">τ·decide</span></div>
+      <div class="panel-body">
+        <div>
+          <div class="ttd-k">Time to decision</div>
+          <div class="ttd"><span id="ttd">240</span><sup>s</sup></div>
+        </div>
+        <div class="auth-badge" id="auth-badge">AUTO · AUTH</div>
+      </div>
+    </section>
+
+    <!-- COA / decision content -->
+    <section class="panel" style="flex:1; min-height:0;">
+      <div class="panel-h"><span class="t" id="coa-title">Courses of action</span><span class="idx" id="coa-idx">ρ-weighted</span></div>
+      <div class="panel-body" id="coa-body">
+        <!-- injected -->
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ───── SCENARIO SELECTOR ───── -->
+  <section class="scenarios panel" style="padding:0;">
+    <div class="lbl-col">
+      <div class="t">Demo scenarios</div>
+      <div class="s">Reliability probe</div>
     </div>
-
-    <h2>Courses of Action</h2>
-    <div class="coas" id="coas"></div>
-
-    <div class="map-panel">
-      <h2>Tactical Picture</h2>
-      <canvas id="map" width="900" height="260"></canvas>
+    <div class="scenario-btns" id="sc-btns">
+      <button class="sc-btn" data-scen="a">
+        <span class="num">01</span>
+        <span>
+          <span class="nm">Clean picture — three bombers</span>
+          <span class="desc">high SA · clear classification · open sky</span>
+        </span>
+        <span class="end">AUTONOMOUS</span>
+      </button>
+      <button class="sc-btn" data-scen="b">
+        <span class="num">02</span>
+        <span>
+          <span class="nm">Swarm with fast-mover breakthrough</span>
+          <span class="desc">degraded radar · urgent window · mixed tracks</span>
+        </span>
+        <span class="end">ADVISE</span>
+      </button>
+      <button class="sc-btn" data-scen="c">
+        <span class="num">03</span>
+        <span>
+          <span class="nm">Jammed sensors + high-value threats</span>
+          <span class="desc">sensors contested · ρ below threshold</span>
+        </span>
+        <span class="end">DEFER</span>
+      </button>
     </div>
   </section>
 
-  <!-- Right: SITREP & forecast -->
-  <section>
-    <div class="sitrep">
-      <div class="headline" id="sitrep-headline">Awaiting scenario selection…</div>
-      <div class="field">
-        <div class="k">Posture</div>
-        <div class="v" id="sitrep-posture">—</div>
-      </div>
-      <div class="field">
-        <div class="k">Threat summary</div>
-        <div class="v" id="sitrep-threats">—</div>
-      </div>
-      <div class="field">
-        <div class="k">Recommendation</div>
-        <div class="v" id="sitrep-recommendation">—</div>
-      </div>
-      <div class="field">
-        <div class="k">Assurance</div>
-        <div class="v" id="sitrep-assurance">—</div>
-      </div>
-      <div class="field">
-        <div class="k">Follow-on</div>
-        <div class="v" id="sitrep-followon">—</div>
-      </div>
-    </div>
+</div>
 
-    <div class="forecast">
-      <h2 style="margin: 0 0 4px 0;">Wave forecast (120 s horizon)</h2>
-      <div id="forecast-summary" style="font-size: 12px; color: var(--text-dim);">
-        —
-      </div>
-      <div class="sector-grid" id="sector-grid"></div>
-    </div>
-  </section>
+<!-- ═══════════════════════════════════════════
+     Operator Advisory Dialog — LLM-assisted
+     ═══════════════════════════════════════════ -->
 
-</main>
+<button class="ai-fab" id="ai-fab" title="Operator Advisory Dialog">
+  <span class="glyph">∴</span>
+  <span>ASK</span>
+</button>
+
+<aside class="ai-drawer" id="ai-drawer">
+  <div class="ai-head">
+    <div>
+      <div class="title">▪ Operator advisory · Explainability</div>
+      <div class="sub">LLM-assisted dialog · does not drive COA selection</div>
+    </div>
+    <div class="btns">
+      <button class="btn" id="ai-settings" title="Settings">⚙</button>
+      <button class="btn" id="ai-close" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="ai-banner">ADVISORY ONLY · RELIABILITY-AWARE LOGIC RETAINS DECISION AUTHORITY</div>
+  <div class="ai-msgs" id="ai-msgs"></div>
+  <div class="ai-quick" id="ai-quick">
+    <button data-q="Why is the system in this mode right now?">Why this mode?</button>
+    <button data-q="Walk me through the recommended COA versus the alternatives.">Compare COAs</button>
+    <button data-q="What-if: Radar-1 goes offline right now. How does rho shift and would the mode change?">What-if Radar-1 down</button>
+    <button data-q="Give me a one-paragraph threat summary I can read aloud to the crew.">Threat summary</button>
+  </div>
+  <div class="ai-input-wrap">
+    <div class="ai-meta-row">
+      <span class="model offline" id="ai-model-label"><span class="dot"></span>no model configured</span>
+      <button id="ai-clear">clear conversation</button>
+    </div>
+    <div class="ai-input-row">
+      <textarea class="ai-input" id="ai-input" rows="1"
+        placeholder="Ask the system. Enter to send · Shift+Enter for newline."></textarea>
+      <button class="ai-send" id="ai-send">SEND</button>
+    </div>
+  </div>
+</aside>
+
+<div class="ai-modal-bg" id="ai-modal-bg">
+  <div class="ai-modal">
+    <div class="kicker">Connector · OpenRouter</div>
+    <h2>API configuration</h2>
+    <p class="hint">Connect the operator advisory dialog to OpenRouter. Your key is stored only in this browser's <code>localStorage</code> — it is never written to a file, sent to the Nimbus-C2 backend, or committed to git.</p>
+
+    <label>API key</label>
+    <input type="password" id="ai-key" placeholder="sk-or-v1-…" autocomplete="off" />
+
+    <label>Model</label>
+    <select id="ai-model">
+      <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet — balanced reasoning</option>
+      <option value="anthropic/claude-3.5-haiku">anthropic/claude-3.5-haiku — faster, cheaper</option>
+      <option value="openai/gpt-4o">openai/gpt-4o</option>
+      <option value="openai/gpt-4o-mini">openai/gpt-4o-mini — cheapest OK quality</option>
+      <option value="google/gemini-pro-1.5">google/gemini-pro-1.5</option>
+      <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct</option>
+      <option value="_custom">— custom model id —</option>
+    </select>
+    <input type="text" id="ai-model-custom" placeholder="provider/model-id" style="margin-top:6px; display:none;" />
+
+    <div class="note">
+      The advisory LLM answers questions about the current state. It does NOT select COAs, issue engagements, or participate in the decision ladder. All authority remains with the reliability-aware engine and the operator.
+    </div>
+    <div class="actions">
+      <button class="cancel" id="ai-modal-cancel">CANCEL</button>
+      <button class="save" id="ai-modal-save">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-foot">
+  <span>NIMBUS-C2 · v0.8.0-rc1 · STAGE 2B PROTOTYPE</span>
+  <span id="foot-mode">MODE · AUTONOMOUS</span>
+  <span>UNCLASSIFIED · EXERCISE</span>
+</div>
 
 <script>
-  /* ------- config ------- */
-  const API = (window.NIMBUS_API || "http://localhost:8000");
+/* ───────────────────────────────────────────────
+   Scenario data
+   Three probe scenarios demonstrating reliability-
+   aware autonomy. Each scenario drives every panel.
+   ─────────────────────────────────────────────── */
 
-  /* ------- backend health check ------- */
-  async function probeBackend() {
-    try {
-      const r = await fetch(API + "/health");
-      const j = await r.json();
-      document.getElementById("backend-status").textContent =
-        `backend ${j.version} ${j.status}`;
-      document.getElementById("backend-dot").style.background = "var(--ok)";
-    } catch (e) {
-      document.getElementById("backend-status").textContent = "backend offline";
-      document.getElementById("backend-dot").style.background = "var(--danger)";
-    }
-  }
+const SCENARIOS = {
 
-  /* ------- scenario loading ------- */
-  let currentScenario = null;
-  let currentResult = null;
+  a: {
+    id: "a",
+    mode: "autonomous",
+    modeLabel: "AUTONOMOUS",
+    modeClass: "mode-autonomous",
+    footMode: "MODE · AUTONOMOUS",
+    linkStatus: "NOMINAL",
+    radarRange: "RNG 250 km · N-up",
 
-  async function loadScenarios() {
-    const list = document.getElementById("scenario-list");
-    list.innerHTML = "";
-    try {
-      const r = await fetch(API + "/demo/scenarios");
-      const j = await r.json();
-      for (const s of j.scenarios) {
-        const btn = document.createElement("button");
-        btn.className = "scenario";
-        btn.dataset.scenarioId = s.id;
-        btn.innerHTML = `<div class="name">${escapeHtml(s.name)}</div>
-                         <div class="desc">${escapeHtml(s.description)}</div>`;
-        btn.addEventListener("click", () => runScenario(s.id));
-        list.appendChild(btn);
-      }
-    } catch (e) {
-      list.innerHTML = '<div style="color: var(--danger);">Failed to load scenarios. Is the backend running?</div>';
-    }
-  }
+    saPct: 94,
+    saState: "NOMINAL",
+    saBreakdown: [
+      { k: "RADAR",  v: 96, cls: "good", label: "96%" },
+      { k: "IR/EO",  v: 91, cls: "good", label: "91%" },
+      { k: "ESM",    v: 93, cls: "good", label: "93%" },
+      { k: "LINK-16",v: 98, cls: "good", label: "98%" },
+      { k: "FUSION", v: 92, cls: "good", label: "92%" },
+    ],
 
-  async function runScenario(id) {
-    document.querySelectorAll(".scenario").forEach(el => {
-      el.classList.toggle("active", el.dataset.scenarioId === id);
-    });
-    document.getElementById("centre").classList.add("loading");
-    try {
-      const r = await fetch(API + "/demo/" + id + "/evaluate", {method: "POST"});
-      currentScenario = id;
-      currentResult = await r.json();
-      render(currentResult);
-      // also fetch the raw scenario for map rendering
-      const sr = await fetch(API + "/demo/scenarios/" + id);
-      const scn = await sr.json();
-      drawMap(scn, currentResult);
-    } catch (e) {
-      alert("Failed to evaluate: " + e.message);
-    } finally {
-      document.getElementById("centre").classList.remove("loading");
-    }
-  }
+    ttd: 240,
+    auth: "AUTO · AUTH",
 
-  /* ------- rendering ------- */
-  function render(r) {
-    const a = r.assurance;
-    // SA gauge
-    const sa = a.sa_health;
-    document.getElementById("sa-number").textContent = Math.round(sa);
-    const arc = document.getElementById("sa-arc");
-    const circumference = 2 * Math.PI * 50;
-    arc.setAttribute("stroke-dasharray",
-      `${circumference * (sa / 100)} ${circumference}`);
-    arc.setAttribute("stroke",
-      sa >= 75 ? "var(--ok)" : sa >= 40 ? "var(--warn)" : "var(--danger)");
+    trk: { count: 3, hostile: 3, unknown: 0, closest: "182 km" },
 
-    // Autonomy badge
-    const badge = document.getElementById("autonomy-badge");
-    badge.className = "autonomy " + a.autonomy_mode;
-    document.getElementById("autonomy-label").textContent = a.autonomy_mode;
+    // tracks rendered in radar svg (x, y in viewBox 700x420, own ship at 350,420)
+    tracks: [
+      { x: 320, y: 110, type: "hostile", label: "H-041 · Bmr",  v: "M.82 · 010°" },
+      { x: 360, y: 95,  type: "hostile", label: "H-042 · Bmr",  v: "M.82 · 012°" },
+      { x: 400, y: 118, type: "hostile", label: "H-043 · Bmr",  v: "M.80 · 015°" },
+    ],
 
-    // Meta row
-    document.getElementById("m-complexity").textContent = a.situation_complexity.toFixed(2);
-    document.getElementById("m-stakes").textContent = a.stakes.toFixed(2);
-    document.getElementById("m-tqi").textContent = a.track_quality_index.toFixed(2);
-    document.getElementById("m-threats").textContent = r.summary.n_threats;
+    sensors: [
+      { n: "RADAR-1", v: "TRACK",  cls: "ok" },
+      { n: "RADAR-2", v: "TRACK",  cls: "ok" },
+      { n: "IR/EO",   v: "LOCK",   cls: "ok" },
+      { n: "ESM",     v: "PASSIVE",cls: "ok" },
+    ],
 
-    // Reasons
-    const reasons = document.getElementById("reasons-list");
-    reasons.innerHTML = a.reasons.length
-      ? a.reasons.map(x => `<li>${escapeHtml(x)}</li>`).join("")
-      : "<li>no specific reasons flagged</li>";
+    wave: [
+      { sec: "N ·000°", n: 3,  trend: "INBOUND +3", conf: 92, cls: "hot" },
+      { sec: "E ·090°", n: 0,  trend: "CLEAR",      conf: 88, cls: "cool" },
+      { sec: "S ·180°", n: 0,  trend: "CLEAR",      conf: 90, cls: "cool" },
+      { sec: "W ·270°", n: 0,  trend: "CLEAR",      conf: 85, cls: "cool" },
+    ],
 
-    // Alerts
-    const alertsEl = document.getElementById("alerts");
-    const alertsText = document.getElementById("alerts-text");
-    if (a.alerts.length) {
-      alertsEl.style.display = "";
-      alertsText.textContent = " " + a.alerts.join(" · ");
+    coaMode: "coa", // normal COA list
+    coaTitle: "Courses of action",
+    coaIdx: "ρ-weighted · N=3",
+    coas: [
+      {
+        recommended: true,
+        name: "Intercept at point Alpha",
+        code: "COA·A-01",
+        desc: "Dispatch 2× IRIS-T interceptors. Engage at 140 km. Leak-through ≤ 3%.",
+        effects: 96, risk: "LOW", reserve: "88%",
+      },
+      {
+        recommended: false,
+        name: "Track & shadow",
+        code: "COA·A-02",
+        desc: "Maintain track, conserve interceptors. Engage only on penetration of 120 km ring.",
+        effects: 81, risk: "MED", reserve: "99%",
+      },
+      {
+        recommended: false,
+        name: "Layered engagement",
+        code: "COA·A-03",
+        desc: "4× interceptors in two waves. Maximum kill probability. Depletes 15% reserve.",
+        effects: 99, risk: "LOW", reserve: "73%",
+      },
+    ],
+  },
+
+  b: {
+    id: "b",
+    mode: "advise",
+    modeLabel: "ADVISE",
+    modeClass: "mode-advise",
+    footMode: "MODE · ADVISE · OPERATOR CONFIRM",
+    linkStatus: "DEGRADED",
+    radarRange: "RNG 180 km · N-up · partial",
+
+    saPct: 62,
+    saState: "DEGRADED",
+    saBreakdown: [
+      { k: "RADAR",  v: 58, cls: "warn", label: "58%" },
+      { k: "IR/EO",  v: 72, cls: "warn", label: "72%" },
+      { k: "ESM",    v: 51, cls: "warn", label: "51%" },
+      { k: "LINK-16",v: 74, cls: "warn", label: "74%" },
+      { k: "FUSION", v: 62, cls: "warn", label: "62%" },
+    ],
+
+    ttd: 45,
+    auth: "HUMAN · CONFIRM",
+
+    trk: { count: 14, hostile: 9, unknown: 5, closest: "47 km" },
+
+    tracks: [
+      // fast mover breakthrough — closer to own ship
+      { x: 360, y: 300, type: "hostile", label: "H-107 · FM",  v: "M2.1 · 002°", big: true },
+      // swarm
+      { x: 430, y: 180, type: "hostile", label: "H-108",  v: "M.60" },
+      { x: 455, y: 160, type: "hostile", label: "H-109",  v: "M.58" },
+      { x: 480, y: 195, type: "hostile", label: "H-110",  v: "M.62" },
+      { x: 500, y: 150, type: "hostile", label: "H-111",  v: "M.55" },
+      { x: 525, y: 175, type: "hostile", label: "H-112",  v: "M.60" },
+      { x: 550, y: 205, type: "hostile", label: "H-113",  v: "M.58" },
+      { x: 580, y: 170, type: "hostile", label: "H-114",  v: "M.62" },
+      { x: 600, y: 200, type: "hostile", label: "H-115",  v: "M.56" },
+      // unknowns
+      { x: 250, y: 200, type: "unknown", label: "U-203", v: "?" },
+      { x: 210, y: 225, type: "unknown", label: "U-204", v: "?" },
+      { x: 175, y: 250, type: "unknown", label: "U-205", v: "?" },
+      { x: 300, y: 175, type: "unknown", label: "U-206", v: "?" },
+      { x: 280, y: 145, type: "unknown", label: "U-207", v: "?" },
+    ],
+
+    sensors: [
+      { n: "RADAR-1", v: "TRACK",   cls: "ok" },
+      { n: "RADAR-2", v: "DEGRADED",cls: "warn" },
+      { n: "IR/EO",   v: "PARTIAL", cls: "warn" },
+      { n: "ESM",     v: "AMBIGUOUS",cls: "warn" },
+    ],
+
+    wave: [
+      { sec: "N ·000°", n: 4,  trend: "INBOUND",     conf: 70, cls: "warm" },
+      { sec: "E ·090°", n: 8,  trend: "INBOUND +8",  conf: 58, cls: "hot" },
+      { sec: "S ·180°", n: 1,  trend: "FAST-MOVER",  conf: 72, cls: "hot" },
+      { sec: "W ·270°", n: 1,  trend: "HOLDING",     conf: 64, cls: "warm" },
+    ],
+
+    coaMode: "coa",
+    coaTitle: "Courses of action — operator confirm",
+    coaIdx: "ρ-weighted · degraded",
+    coas: [
+      {
+        recommended: true,
+        name: "Prioritize fast-mover",
+        code: "COA·B-01",
+        desc: "Commit ICT-03 to H-107 (Mach 2, 47 km). Swarm held to secondary. Operator confirm within 45s.",
+        effects: 74, risk: "MED", reserve: "82%",
+      },
+      {
+        recommended: false,
+        name: "Full engagement",
+        code: "COA·B-02",
+        desc: "Engage fast-mover + swarm. Depletes 40% reserve, higher leak-through on swarm.",
+        effects: 81, risk: "HIGH", reserve: "58%",
+      },
+      {
+        recommended: false,
+        name: "Area defence on swarm",
+        code: "COA·B-03",
+        desc: "Focus on 8-ship E-sector. Accept fast-mover leak to close-in layer. Reliability of close-in < nominal.",
+        effects: 63, risk: "HIGH", reserve: "74%",
+      },
+    ],
+  },
+
+  c: {
+    id: "c",
+    mode: "defer",
+    modeLabel: "DEFER",
+    modeClass: "mode-defer",
+    footMode: "MODE · DEFER · OPERATOR DECISION REQUIRED",
+    linkStatus: "CONTESTED",
+    radarRange: "RNG 120 km · jammed · N-up",
+
+    saPct: 28,
+    saState: "CONTESTED",
+    saBreakdown: [
+      { k: "RADAR",  v: 22, cls: "bad",  label: "22%" },
+      { k: "IR/EO",  v: 48, cls: "warn", label: "48%" },
+      { k: "ESM",    v: 16, cls: "bad",  label: "16%" },
+      { k: "LINK-16",v: 34, cls: "bad",  label: "34%" },
+      { k: "FUSION", v: 28, cls: "bad",  label: "28%" },
+    ],
+
+    ttd: 20,
+    auth: "OPERATOR · REQUIRED",
+
+    trk: { count: 22, hostile: 6, unknown: 16, closest: "31 km" },
+
+    tracks: [
+      // high-value ambiguous cluster
+      { x: 340, y: 240, type: "hostile", label: "H?-151 · HVT", v: "ambig", big: true },
+      { x: 300, y: 215, type: "hostile", label: "H?-152 · HVT", v: "ambig" },
+      { x: 380, y: 220, type: "hostile", label: "H?-153 · HVT", v: "ambig" },
+      // many unknowns across the field
+      { x: 220, y: 260, type: "unknown", label: "U-311", v: "?" },
+      { x: 190, y: 240, type: "unknown", label: "U-312", v: "?" },
+      { x: 160, y: 280, type: "unknown", label: "U-313", v: "?" },
+      { x: 140, y: 210, type: "unknown", label: "U-314", v: "?" },
+      { x: 430, y: 245, type: "unknown", label: "U-315", v: "?" },
+      { x: 465, y: 225, type: "unknown", label: "U-316", v: "?" },
+      { x: 500, y: 275, type: "unknown", label: "U-317", v: "?" },
+      { x: 535, y: 255, type: "unknown", label: "U-318", v: "?" },
+      { x: 260, y: 150, type: "unknown", label: "U-319", v: "?" },
+      { x: 300, y: 125, type: "unknown", label: "U-320", v: "?" },
+      { x: 345, y: 108, type: "unknown", label: "U-321", v: "?" },
+      { x: 395, y: 130, type: "unknown", label: "U-322", v: "?" },
+      { x: 430, y: 155, type: "unknown", label: "U-323", v: "?" },
+      { x: 180, y: 170, type: "unknown", label: "U-324", v: "?" },
+      { x: 230, y: 190, type: "unknown", label: "U-325", v: "?" },
+      { x: 485, y: 190, type: "unknown", label: "U-326", v: "?" },
+      { x: 540, y: 210, type: "unknown", label: "U-327", v: "?" },
+    ],
+
+    sensors: [
+      { n: "RADAR-1", v: "JAMMED",   cls: "bad"  },
+      { n: "RADAR-2", v: "JAMMED",   cls: "bad"  },
+      { n: "IR/EO",   v: "PARTIAL",  cls: "warn" },
+      { n: "ESM",     v: "CONTESTED",cls: "bad"  },
+    ],
+
+    wave: [
+      { sec: "N ·000°", n: "?", trend: "NO CONFIDENCE", conf: 18, cls: "unknown" },
+      { sec: "E ·090°", n: "?", trend: "NO CONFIDENCE", conf: 22, cls: "unknown" },
+      { sec: "S ·180°", n: 3,   trend: "HVT POSSIBLE",  conf: 41, cls: "warm" },
+      { sec: "W ·270°", n: "?", trend: "NO CONFIDENCE", conf: 14, cls: "unknown" },
+    ],
+
+    coaMode: "defer",
+    coaTitle: "Decision returned to operator",
+    coaIdx: "ρ < 0.40 · auto inhibited",
+  },
+};
+
+/* ───────────────────────────────────────────────
+   Rendering
+   ─────────────────────────────────────────────── */
+
+const body = document.body;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+function setMode(scen) {
+  body.classList.remove("mode-autonomous", "mode-advise", "mode-defer");
+  body.classList.add(scen.modeClass);
+  $("#foot-mode").textContent = scen.footMode;
+  $("#link-status").textContent = scen.linkStatus;
+  $("#radar-range").textContent = scen.radarRange;
+
+  // mode ladder highlight
+  $("#m-auto").classList.toggle("active",  scen.mode === "autonomous");
+  $("#m-adv").classList.toggle("active",   scen.mode === "advise");
+  $("#m-defer").classList.toggle("active", scen.mode === "defer");
+
+  // auth badge
+  $("#auth-badge").textContent = scen.auth;
+}
+
+function renderGauge(scen) {
+  const r = 78;
+  const circ = 2 * Math.PI * r; // ≈ 490.1
+  const offset = circ * (1 - scen.saPct / 100);
+  $("#gauge-fill").setAttribute("stroke-dasharray", circ.toFixed(1));
+  $("#gauge-fill").setAttribute("stroke-dashoffset", offset.toFixed(1));
+  animateNumber("#sa-pct", scen.saPct, 650);
+  $("#sa-state").textContent = scen.saState;
+}
+
+function renderSABreakdown(scen) {
+  const wrap = $("#sa-breakdown");
+  wrap.innerHTML = scen.saBreakdown.map(r => `
+    <div class="sa-row ${r.cls}">
+      <span class="k">${r.k}</span>
+      <span class="bar"><i style="width:${r.v}%"></i></span>
+      <span class="v">${r.label}</span>
+    </div>
+  `).join("");
+}
+
+function renderSensors(scen) {
+  const host = $("#sensor-grid");
+  if (!host) return;
+  host.innerHTML = scen.sensors.map(s => `
+    <div class="sensor ${s.cls}">
+      <span class="name">${s.n}</span>
+      <span class="val">${s.v}</span>
+      <span class="dot"></span>
+    </div>
+  `).join("");
+}
+
+function renderTracks(scen) {
+  const g = $("#tracks");
+  const parts = [];
+  for (const t of scen.tracks) {
+    const big = t.big ? 1.35 : 1.0;
+    if (t.type === "hostile") {
+      const size = 8 * big;
+      parts.push(`
+        <g transform="translate(${t.x},${t.y})" filter="url(#glow)">
+          <polygon points="0,-${size} ${size*0.9},${size*0.7} -${size*0.9},${size*0.7}"
+                   fill="#ff5166" opacity="${t.big ? 1 : 0.92}"/>
+          <text x="${size + 3}" y="3" fill="#ff8090" font-family="IBM Plex Mono"
+                font-size="${t.big ? 10 : 9}" letter-spacing="1">${t.label}</text>
+          <text x="${size + 3}" y="14" fill="#8a96a8" font-family="IBM Plex Mono"
+                font-size="8" letter-spacing="1">${t.v || ""}</text>
+          ${t.big ? `<circle r="${size + 6}" fill="none" stroke="#ff5166" stroke-width="1" opacity="0.5">
+            <animate attributeName="r" from="${size + 4}" to="${size + 14}" dur="1.6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" from="0.7" to="0" dur="1.6s" repeatCount="indefinite"/>
+          </circle>` : ""}
+        </g>
+      `);
+    } else if (t.type === "unknown") {
+      parts.push(`
+        <g transform="translate(${t.x},${t.y})">
+          <circle r="5" fill="none" stroke="#f5b642" stroke-width="1.5" opacity="0.9"/>
+          <text x="8" y="3" fill="#f5b642" font-family="IBM Plex Mono"
+                font-size="8" letter-spacing="1" opacity="0.8">${t.label}</text>
+        </g>
+      `);
     } else {
-      alertsEl.style.display = "none";
+      parts.push(`
+        <g transform="translate(${t.x},${t.y})">
+          <rect x="-4" y="-4" width="8" height="8" fill="#5fb4ff" transform="rotate(45)"/>
+          <text x="8" y="3" fill="#5fb4ff" font-family="IBM Plex Mono"
+                font-size="8" letter-spacing="1">${t.label}</text>
+        </g>
+      `);
     }
+  }
+  g.innerHTML = parts.join("");
 
-    // COAs
-    const coasEl = document.getElementById("coas");
-    coasEl.innerHTML = "";
-    for (const coa of r.coas) {
-      const el = document.createElement("div");
-      el.className = "coa" + (coa.label === "recommended" ? " selected" : "");
-      el.innerHTML = `
-        <div class="label">${coa.label.replace(/_/g, " ")}</div>
-        <div class="philosophy">${escapeHtml(coa.philosophy)}</div>
-        <div class="coa-stats">
-          <div class="stat"><span class="k">utility</span><span class="v mono">${coa.total_utility.toFixed(1)}</span></div>
-          <div class="stat"><span class="k">coverage</span><span class="v mono">${(coa.predicted_coverage*100).toFixed(0)}%</span></div>
-          <div class="stat"><span class="k">follow-on risk</span><span class="v mono">${coa.risk_if_follow_on.toFixed(2)}</span></div>
-          <div class="stat"><span class="k">engagements</span><span class="v mono">${coa.assignments.length}</span></div>
-        </div>
-        <div class="coa-assignments">
-          ${coa.assignments.length
-              ? coa.assignments.map(a => `<div class="asn">
-                    <span><strong>${escapeHtml(a.base_name)}</strong> · ${escapeHtml(a.effector)} → ${escapeHtml(a.threat_id)}</span>
-                    <span class="mono">Pk ${a.pk_effective.toFixed(2)}</span>
-                  </div>`).join("")
-              : '<div class="asn">no feasible engagements</div>'
-          }
-        </div>`;
-      coasEl.appendChild(el);
+  // tracks counter
+  $("#trk-count").textContent = scen.trk.count;
+  $("#trk-hostile").textContent = scen.trk.hostile;
+  $("#trk-unk").textContent = scen.trk.unknown;
+  $("#trk-close").textContent = scen.trk.closest;
+}
+
+function renderRings() {
+  const g = $("#rings");
+  const cx = 350, cy = 420;
+  const rings = [60, 140, 220, 300, 380];
+  const labels = ["50", "100", "150", "200", "250"];
+  g.innerHTML = rings.map((r, i) => `
+    <circle cx="${cx}" cy="${cy}" r="${r}" />
+    <text x="${cx + 4}" y="${cy - r + 10}" fill="#3a4658" font-family="IBM Plex Mono"
+          font-size="8" letter-spacing="1">${labels[i]} km</text>
+  `).join("");
+}
+
+function renderWave(scen) {
+  const grid = $("#wave-grid");
+  grid.innerHTML = scen.wave.map(w => `
+    <div class="wave-cell ${w.cls}">
+      <span class="sec">${w.sec}</span>
+      <span class="n">${w.n}${typeof w.n === "number" && w.n > 0 ? "<sup>trks</sup>" : ""}</span>
+      <span class="trend">${w.trend}</span>
+      <span class="conf"><span>CONF</span><span class="b"><i style="width:${w.conf}%"></i></span><span>${w.conf}%</span></span>
+    </div>
+  `).join("");
+}
+
+function renderCOAs(scen) {
+  $("#coa-title").textContent = scen.coaTitle;
+  $("#coa-idx").textContent = scen.coaIdx;
+  const host = $("#coa-body");
+
+  if (scen.coaMode === "defer") {
+    host.innerHTML = `
+      <div class="defer-expl">
+        <div class="h">▲ Decision returned to operator</div>
+        <p>Situational-awareness reliability has fallen below the auto-authorization threshold. The engine has <strong>inhibited</strong> automatic COA selection.</p>
+        <p>Rationale: Radar-1 and Radar-2 are jammed; ESM contested; 72% of tracks unclassified. Weapon release under current picture would commit to a decision the model cannot back.</p>
+        <div class="math">ρ·SA = 0.28  <  ρ·min = 0.40<br>χ·A &nbsp;&nbsp;→ &nbsp;DEFER (CHI·1)</div>
+        <p style="margin-top:10px;">Operator retains full authority. Recommended actions: reposition for sensor unmask · request wingman mid-course update · hold fires until ρ ≥ 0.40.</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;">
+        <button class="coa" style="text-align:left; color:var(--text-0);">
+          <div class="name">Manual engage</div>
+          <div class="desc">Operator-selected weapon release on HVT cluster</div>
+        </button>
+        <button class="coa" style="text-align:left; color:var(--text-0);">
+          <div class="name">Hold &amp; unmask</div>
+          <div class="desc">Reposition 8 nm · re-evaluate ρ in T+40s</div>
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  host.innerHTML = scen.coas.map(c => `
+    <div class="coa ${c.recommended ? "recommended" : ""}">
+      <div class="coa-row1">
+        <div class="name">${c.name}</div>
+        <div class="code">${c.code}</div>
+      </div>
+      <div class="desc">${c.desc}</div>
+      <div class="coa-metrics">
+        <div class="m conf"><span class="k">p(effect)</span><span class="v">${c.effects}%</span></div>
+        <div class="m"><span class="k">risk</span><span class="v">${c.risk}</span></div>
+        <div class="m"><span class="k">reserve</span><span class="v">${c.reserve}</span></div>
+      </div>
+      <div class="reliability">
+        <span>ρ</span><span class="bar"><i style="width:${c.effects}%"></i></span><span>${(c.effects/100).toFixed(2)}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function animateNumber(sel, target, ms) {
+  const el = $(sel);
+  const start = parseFloat(el.textContent) || 0;
+  const t0 = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / ms);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(start + (target - start) * eased);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function renderAll(scen) {
+  setMode(scen);
+  renderGauge(scen);
+  renderSABreakdown(scen);
+  renderTracks(scen);
+  renderWave(scen);
+  renderCOAs(scen);
+  $("#ttd").textContent = scen.ttd;
+  addSensorsToLeftColumn(scen);
+}
+
+/* sensors panel — inserted dynamically into the mode panel */
+function addSensorsToLeftColumn(scen) {
+  let existing = document.getElementById("sensor-panel");
+  if (!existing) {
+    existing = document.createElement("section");
+    existing.id = "sensor-panel";
+    existing.className = "panel";
+    existing.innerHTML = `
+      <div class="panel-h"><span class="t">Sensor status</span><span class="idx">σ</span></div>
+      <div class="panel-body">
+        <div class="sensors-grid" id="sensor-grid"></div>
+      </div>
+    `;
+    document.querySelector(".left").appendChild(existing);
+  }
+  renderSensors(scen);
+}
+
+/* ───────────────────────────────────────────────
+   Clock + sweep
+   ─────────────────────────────────────────────── */
+
+function tickClock() {
+  const d = new Date();
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  const ss = String(d.getUTCSeconds()).padStart(2, "0");
+  $("#clock").textContent = `${hh}:${mm}:${ss}Z`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+/* rotating sweep */
+let sweepAngle = 0;
+const sweep = $("#sweep");
+function sweepTick() {
+  sweepAngle = (sweepAngle + 1.2) % 360;
+  sweep.setAttribute("transform", `rotate(${sweepAngle} 350 420)`);
+  requestAnimationFrame(sweepTick);
+}
+requestAnimationFrame(sweepTick);
+
+/* time-to-decision countdown */
+let ttdInterval = null;
+function startTTD(scen) {
+  if (ttdInterval) clearInterval(ttdInterval);
+  let t = scen.ttd;
+  $("#ttd").textContent = t;
+  ttdInterval = setInterval(() => {
+    if (t > 0) { t -= 1; $("#ttd").textContent = t; }
+  }, 1000);
+}
+
+/* ───────────────────────────────────────────────
+   Scenario buttons
+   ─────────────────────────────────────────────── */
+
+$$(".sc-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$(".sc-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const scen = SCENARIOS[btn.dataset.scen];
+    renderAll(scen);
+    startTTD(scen);
+  });
+});
+
+/* keyboard shortcuts 1 / 2 / 3 */
+document.addEventListener("keydown", e => {
+  const map = { "1": "a", "2": "b", "3": "c" };
+  if (map[e.key]) {
+    document.querySelector(`.sc-btn[data-scen="${map[e.key]}"]`).click();
+  }
+});
+
+/* ───────────────────────────────────────────────
+   Render range rings once + boot scenario A
+   ─────────────────────────────────────────────── */
+
+renderRings();
+document.querySelector('.sc-btn[data-scen="a"]').classList.add("active");
+renderAll(SCENARIOS.a);
+startTTD(SCENARIOS.a);
+
+/* ═════════════════════════════════════════════
+   Operator Advisory Dialog — OpenRouter integration
+   LLM is used for EXPLAINABILITY only. It does not
+   participate in COA selection or decision authority.
+   ═════════════════════════════════════════════ */
+
+const AI = {
+  key: localStorage.getItem("nimbus_or_key") || "",
+  model: localStorage.getItem("nimbus_or_model") || "anthropic/claude-3.5-sonnet",
+  history: [],             // {role: 'user'|'assistant', content: string}
+  streaming: false,
+  abortCtrl: null,
+  scenarioId: "a",         // kept in sync with active scenario
+};
+
+/* ── DOM references ── */
+const aiFab      = document.getElementById("ai-fab");
+const aiDrawer   = document.getElementById("ai-drawer");
+const aiClose    = document.getElementById("ai-close");
+const aiSettings = document.getElementById("ai-settings");
+const aiMsgs     = document.getElementById("ai-msgs");
+const aiInput    = document.getElementById("ai-input");
+const aiSend     = document.getElementById("ai-send");
+const aiQuick    = document.getElementById("ai-quick");
+const aiClear    = document.getElementById("ai-clear");
+const aiLabel    = document.getElementById("ai-model-label");
+const aiModalBg  = document.getElementById("ai-modal-bg");
+const aiKey      = document.getElementById("ai-key");
+const aiModel    = document.getElementById("ai-model");
+const aiModelCustom = document.getElementById("ai-model-custom");
+const aiModalSave   = document.getElementById("ai-modal-save");
+const aiModalCancel = document.getElementById("ai-modal-cancel");
+
+/* ── Scenario context → system prompt ── */
+function buildSystemPrompt() {
+  const s = SCENARIOS[AI.scenarioId];
+  const labels = {
+    a: "Clean picture — three bombers inbound",
+    b: "Swarm with fast-mover breakthrough",
+    c: "Jammed sensors + high-value threats",
+  };
+  const saLines = s.saBreakdown.map(r => `  - ${r.k}: ${r.label}`).join("\n");
+  const sensorLines = s.sensors.map(sn => `  - ${sn.n}: ${sn.v}`).join("\n");
+  const waveLines = s.wave.map(w =>
+    `  - ${w.sec}: ${w.n} track(s), ${w.trend}, confidence ${w.conf}%`
+  ).join("\n");
+
+  let coaLines;
+  if (s.coaMode === "defer") {
+    coaLines = "  DEFER — automatic COA selection inhibited. Operator decision required.";
+  } else {
+    coaLines = s.coas.map(c =>
+      `  - ${c.code} "${c.name}"${c.recommended ? " [RECOMMENDED]" : ""}: p(effect)=${c.effects}%, risk=${c.risk}, reserve=${c.reserve}. ${c.desc}`
+    ).join("\n");
+  }
+
+  return `You are the OPERATOR ADVISORY ASSISTANT for NIMBUS-C2, a reliability-aware command-and-control decision engine. You help the operator understand the current state and reasoning. You do NOT make tactical decisions — decision authority remains with the operator and with the deterministic COA engine. Your job is explainability, not command.
+
+=== CURRENT STATE ===
+Scenario: ${labels[s.id]}
+Autonomy mode: ${s.modeLabel}
+Authority: ${s.auth}
+Time to decision: ${s.ttd}s
+SA-health (rho): ${s.saPct}% (${s.saState})
+SA component breakdown:
+${saLines}
+Sensor status:
+${sensorLines}
+Tracks: ${s.trk.count} total, ${s.trk.hostile} hostile, ${s.trk.unknown} unknown, closest at ${s.trk.closest}
+Wave forecast (T+90s):
+${waveLines}
+Courses of action:
+${coaLines}
+
+=== NIMBUS-C2 FRAMEWORK ===
+The autonomy ladder is gated by rho-SA (reliability of situational awareness):
+  - rho >= 0.80 -> AUTONOMOUS (chi-3): system executes within commander's intent
+  - 0.40 <= rho < 0.80 -> ADVISE (chi-2): system recommends, operator confirms
+  - rho < 0.40 -> DEFER (chi-1): automatic COA selection inhibited, operator authority
+When reliability drops, the system widens confidence bounds and downshifts authority rather than guessing. This is the core claim: reliability-aware rather than accuracy-optimistic.
+
+=== GUIDELINES ===
+- Be terse, technical, defense-professional. No emoji. No exclamation marks.
+- Reference specific numbers from the state above when relevant.
+- Do not invent data. If the operator asks about something outside the state, say so briefly.
+- For what-if questions, reason about how rho-SA would change and whether autonomy mode would shift.
+- When giving recommendations, end with "Operator decides." where appropriate.
+- Keep responses under 150 words unless asked for more detail.
+- Use short paragraphs. Use bullets only for discrete lists of 3+ items.
+- You are speaking to a trained operator; do not over-explain basics.`;
+}
+
+/* ── UI: open/close drawer, modal ── */
+function openDrawer() {
+  aiDrawer.classList.add("open");
+  aiFab.classList.add("hidden");
+  if (!AI.key) openModal();
+  else if (AI.history.length === 0) seedGreeting();
+  setTimeout(() => aiInput.focus(), 320);
+}
+function closeDrawer() {
+  aiDrawer.classList.remove("open");
+  aiFab.classList.remove("hidden");
+}
+function openModal() {
+  aiKey.value = AI.key;
+  const presetOptions = Array.from(aiModel.options).map(o => o.value);
+  if (presetOptions.includes(AI.model)) {
+    aiModel.value = AI.model;
+    aiModelCustom.style.display = "none";
+  } else {
+    aiModel.value = "_custom";
+    aiModelCustom.style.display = "block";
+    aiModelCustom.value = AI.model;
+  }
+  aiModalBg.classList.add("open");
+  setTimeout(() => aiKey.focus(), 50);
+}
+function closeModal() { aiModalBg.classList.remove("open"); }
+
+aiFab.addEventListener("click", openDrawer);
+aiClose.addEventListener("click", closeDrawer);
+aiSettings.addEventListener("click", openModal);
+aiModalCancel.addEventListener("click", closeModal);
+
+aiModel.addEventListener("change", () => {
+  aiModelCustom.style.display = aiModel.value === "_custom" ? "block" : "none";
+});
+
+aiModalSave.addEventListener("click", () => {
+  const k = aiKey.value.trim();
+  const m = aiModel.value === "_custom" ? aiModelCustom.value.trim() : aiModel.value;
+  if (!k) { aiKey.focus(); aiKey.style.borderColor = "var(--alert)"; return; }
+  if (!m) { aiModelCustom.focus(); return; }
+  AI.key = k;
+  AI.model = m;
+  localStorage.setItem("nimbus_or_key", k);
+  localStorage.setItem("nimbus_or_model", m);
+  updateModelLabel();
+  closeModal();
+  if (AI.history.length === 0) seedGreeting();
+});
+
+function updateModelLabel() {
+  if (AI.key && AI.model) {
+    aiLabel.classList.remove("offline");
+    aiLabel.innerHTML = `<span class="dot"></span>${AI.model}`;
+  } else {
+    aiLabel.classList.add("offline");
+    aiLabel.innerHTML = `<span class="dot"></span>no model configured · click ⚙`;
+  }
+}
+updateModelLabel();
+
+/* ── Message rendering ── */
+function addMsg(role, text, cls="") {
+  const el = document.createElement("div");
+  el.className = `ai-msg ${role} ${cls}`.trim();
+  const who = role === "user" ? "OPERATOR"
+            : role === "ai"   ? "ADVISORY"
+            : "SYSTEM";
+  el.innerHTML = `<div class="who">${who}</div><div class="body"></div>`;
+  el.querySelector(".body").textContent = text;
+  aiMsgs.appendChild(el);
+  aiMsgs.scrollTop = aiMsgs.scrollHeight;
+  return el;
+}
+
+function seedGreeting() {
+  aiMsgs.innerHTML = "";
+  const s = SCENARIOS[AI.scenarioId];
+  const labels = {
+    a: "Scenario 01 — Clean picture. System is AUTONOMOUS. You supervise.",
+    b: "Scenario 02 — Swarm with fast-mover. System is ADVISE. Operator confirms within 45s.",
+    c: "Scenario 03 — Jammed sensors. System is DEFER. Operator authority required.",
+  };
+  addMsg("system", labels[s.id]);
+  addMsg("ai", "Advisory online. Ask about the current picture, the recommended COA, or run what-if questions on sensor status or reliability. Authority stays with you.");
+}
+
+aiClear.addEventListener("click", () => {
+  AI.history = [];
+  seedGreeting();
+});
+
+/* ── Sending ── */
+aiInput.addEventListener("input", () => {
+  aiInput.style.height = "auto";
+  aiInput.style.height = Math.min(120, aiInput.scrollHeight) + "px";
+});
+aiInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendPrompt(aiInput.value.trim());
+  }
+});
+aiSend.addEventListener("click", () => sendPrompt(aiInput.value.trim()));
+
+aiQuick.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-q]");
+  if (btn) sendPrompt(btn.dataset.q);
+});
+
+async function sendPrompt(text) {
+  if (!text || AI.streaming) return;
+  if (!AI.key) { openModal(); return; }
+
+  aiInput.value = "";
+  aiInput.style.height = "auto";
+  addMsg("user", text);
+  AI.history.push({ role: "user", content: text });
+
+  // placeholder for streaming assistant message
+  const aiEl = addMsg("ai", "");
+  aiEl.querySelector(".body").classList.add("ai-cursor");
+
+  AI.streaming = true;
+  aiSend.disabled = true;
+  AI.abortCtrl = new AbortController();
+
+  try {
+    await streamCompletion(aiEl);
+  } catch (err) {
+    const body = aiEl.querySelector(".body");
+    body.classList.remove("ai-cursor");
+    if (err.name === "AbortError") {
+      body.textContent = "[response aborted]";
+    } else {
+      aiEl.classList.add("error");
+      body.textContent = `Advisory unavailable. Reliability-aware logic continues unaffected.\n\n${err.message || err}`;
     }
+  } finally {
+    AI.streaming = false;
+    aiSend.disabled = false;
+    AI.abortCtrl = null;
+  }
+}
 
-    // SITREP
-    document.getElementById("sitrep-headline").textContent = r.sitrep.headline;
-    document.getElementById("sitrep-posture").textContent = r.sitrep.posture;
-    document.getElementById("sitrep-threats").textContent = r.sitrep.threats_summary;
-    document.getElementById("sitrep-recommendation").textContent = r.sitrep.recommendation;
-    document.getElementById("sitrep-assurance").textContent = r.sitrep.assurance_note;
-    document.getElementById("sitrep-followon").textContent = r.sitrep.follow_on_note;
+/* ── OpenRouter streaming call ── */
+async function streamCompletion(aiEl) {
+  const body = aiEl.querySelector(".body");
+  const messages = [
+    { role: "system", content: buildSystemPrompt() },
+    ...AI.history,
+  ];
 
-    // Forecast
-    const f = r.forecast;
-    document.getElementById("forecast-summary").textContent =
-      `Follow-on likelihood ${(f.follow_on_likelihood*100).toFixed(0)}% · ` +
-      `expected value ${f.total_expected_value.toFixed(0)}`;
-    const grid = document.getElementById("sector-grid");
-    grid.innerHTML = "";
-    for (const s of f.sectors) {
-      const el = document.createElement("div");
-      el.className = "sector" + (s.arrival_prob_60s >= 0.3 ? " hot" : "");
-      el.innerHTML = `<div class="id">${s.sector_id}</div>
-        <div class="mono" style="font-size: 11px; color: var(--text-dim);">
-          n=${s.n_current} · p60=${(s.arrival_prob_60s*100).toFixed(0)}%<br>
-          EV ${s.expected_value.toFixed(0)}
-        </div>`;
-      grid.appendChild(el);
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    signal: AI.abortCtrl.signal,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${AI.key}`,
+      "HTTP-Referer": "https://github.com/Maria-hub-Westrin/nimbus-c2",
+      "X-Title": "NIMBUS-C2 Operator Advisory",
+    },
+    body: JSON.stringify({
+      model: AI.model,
+      messages,
+      stream: true,
+      temperature: 0.3,
+      max_tokens: 600,
+    }),
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.text()).slice(0, 240); } catch {}
+    throw new Error(`HTTP ${res.status} · ${res.statusText}${detail ? ` · ${detail}` : ""}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let accumulated = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE: split on double newline
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop(); // keep last partial
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data:")) continue;
+      const data = line.slice(5).trim();
+      if (data === "[DONE]") break;
+      try {
+        const obj = JSON.parse(data);
+        const delta = obj.choices?.[0]?.delta?.content || "";
+        if (delta) {
+          accumulated += delta;
+          body.textContent = accumulated;
+          aiMsgs.scrollTop = aiMsgs.scrollHeight;
+        }
+      } catch { /* ignore non-JSON keepalives */ }
     }
   }
 
-  /* ------- map canvas ------- */
-  function drawMap(scenario, result) {
-    const canvas = document.getElementById("map");
-    const ctx = canvas.getContext("2d");
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    // Determine world bounds from bases + threats.
-    const pts = [
-      ...scenario.bases.map(b => [b.x, b.y]),
-      ...scenario.threats.map(t => [t.x, t.y]),
-    ];
-    if (!pts.length) return;
-    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-    const xmin = Math.min(...xs) - 30, xmax = Math.max(...xs) + 30;
-    const ymin = Math.min(...ys) - 30, ymax = Math.max(...ys) + 30;
-    const sx = w / (xmax - xmin), sy = h / (ymax - ymin);
-    const s = Math.min(sx, sy);
-    const cx = (x) => (x - xmin) * s + 20;
-    const cy = (y) => h - ((y - ymin) * s + 20);   // flip y
-
-    // Grid
-    ctx.strokeStyle = "#1b252d"; ctx.lineWidth = 1;
-    for (let gx = 0; gx < w; gx += 40) {
-      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
-    }
-    for (let gy = 0; gy < h; gy += 40) {
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
-    }
-
-    // Blind spots
-    for (const bs of (scenario.blind_spots || [])) {
-      ctx.fillStyle = "rgba(213, 123, 123, 0.15)";
-      ctx.strokeStyle = "rgba(213, 123, 123, 0.5)";
-      ctx.beginPath();
-      ctx.arc(cx(bs[0]), cy(bs[1]), 80 * s, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-    }
-
-    // Bases
-    for (const b of scenario.bases) {
-      ctx.fillStyle = b.is_capital ? "#6fb3d2" : "#8b9aa3";
-      ctx.beginPath();
-      ctx.arc(cx(b.x), cy(b.y), b.is_capital ? 8 : 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#cfd8dc";
-      ctx.font = "11px ui-monospace, monospace";
-      ctx.fillText(b.name, cx(b.x) + 10, cy(b.y) + 4);
-    }
-
-    // Threats
-    for (const t of scenario.threats) {
-      ctx.fillStyle = t.threat_value > 80 ? "#d57b7b" :
-                      t.threat_value > 40 ? "#e0c068" : "#8b9aa3";
-      ctx.beginPath();
-      ctx.moveTo(cx(t.x), cy(t.y) - 5);
-      ctx.lineTo(cx(t.x) + 4, cy(t.y) + 3);
-      ctx.lineTo(cx(t.x) - 4, cy(t.y) + 3);
-      ctx.closePath(); ctx.fill();
-    }
-
-    // Assignments (recommended COA only)
-    const rec = result.coas.find(c => c.label === "recommended");
-    if (rec) {
-      const baseByName = {};
-      for (const b of scenario.bases) baseByName[b.name] = b;
-      const threatById = {};
-      for (const t of scenario.threats) threatById[t.id] = t;
-      ctx.strokeStyle = "rgba(111, 179, 210, 0.6)"; ctx.lineWidth = 1.5;
-      for (const a of rec.assignments) {
-        const b = baseByName[a.base_name];
-        const t = threatById[a.threat_id];
-        if (!b || !t) continue;
-        ctx.beginPath();
-        ctx.moveTo(cx(b.x), cy(b.y));
-        ctx.lineTo(cx(t.x), cy(t.y));
-        ctx.stroke();
-      }
-    }
+  body.classList.remove("ai-cursor");
+  if (accumulated.trim()) {
+    AI.history.push({ role: "assistant", content: accumulated });
+  } else {
+    body.textContent = "[empty response]";
   }
+}
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
-    })[c]);
+/* ── Keep advisory context in sync with active scenario ── */
+const _origRenderAll = renderAll;
+renderAll = function(scen) {
+  _origRenderAll(scen);
+  AI.scenarioId = scen.id;
+  // If drawer is open and conversation empty, re-seed greeting for new scenario
+  if (aiDrawer.classList.contains("open") && AI.history.length === 0) {
+    seedGreeting();
   }
+};
 
-  /* ------- boot ------- */
-  probeBackend();
-  loadScenarios();
+/* ── Keyboard: Escape closes drawer/modal ── */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (aiModalBg.classList.contains("open")) closeModal();
+    else if (aiDrawer.classList.contains("open")) closeDrawer();
+  }
+});
+
 </script>
-
 </body>
 </html>
